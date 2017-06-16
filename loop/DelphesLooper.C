@@ -89,30 +89,38 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
   cout << "[DelphesLooper::loop] creating output file: " << output_name << endl;
 
   outfile_ = new TFile(output_name.Data(),"RECREATE") ; 
+  if (verbose) cout <<__LINE__ << endl;
 
   // File Loop
   while ( (currentFile = (TFile*)fileIter.Next()) ) { 
+    if (verbose) cout <<__LINE__ << endl;
 
     // Get File Content
     if(nEventsDone >= nEventsToDo) continue;
     TFile *file = new TFile( currentFile->GetTitle() );
     TString filename(currentFile->GetTitle());
-    
+    if (verbose) cout << "file name is " << file->GetName() << endl;
+
     TTree *tree = (TTree*)file->Get("Delphes");
     Delphes d(tree); // Create an instance of the delphes class and connect it to this tree
-  
+    if (verbose) cout <<__LINE__ << endl;
+
     // Loop over Events in current file
     unsigned int nEventsTree = tree->GetEntriesFast();
+    if (verbose) cout <<__LINE__ << endl;
+
     for(unsigned int evt = 0; evt < nEventsTree; evt++){  // Real loop over all events
-    //    for(unsigned int evt = 0; evt < 10; evt++){  // For Testing
-	  
+    //for(unsigned int evt = 0; evt < 10; evt++){  // For Testing
+      if (verbose) cout <<__LINE__ << endl;
+
       // Get Event Content
-      if(nEventsDone >= nEventsToDo) continue;   
+      if(nEventsDone >= nEventsToDo) continue;  
+      if (verbose) cout <<__LINE__ << endl; 
       d.GetEntry(evt);
       nEventsDone++;
+      if (verbose) cout <<__LINE__ << endl;
 
       //Debug mode
-      if (verbose) cout << "file name is " << file->GetName() << endl;
      
       // Progress
       progress(nEventsDone, nEventsToDo);
@@ -126,7 +134,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	float eta = d.MuonTight_Eta[i];
 	plot1D("h_mupt", pt,  evtweight_, h_1d, "pT [GeV]", 40, 0, 400);
 	if (pt < 5) continue;
-	if (eta>0.9891693 && eta<0.9891696) continue; // Hot Spot
+	//if (eta>0.9891693 && eta<0.9891696) continue; // Hot Spot
 	nlep_++;
 	part lep;
 	lep.vec.SetPtEtaPhiM(pt,d.MuonTight_Eta[i],d.MuonTight_Phi[i],0);
@@ -140,6 +148,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	  leptons_.push_back(lep);
 	}
       }
+      if (verbose) cout <<__LINE__ << endl;
 
       for ( int i = 0; i < d.Electron_ ; ++i) {
 	//cout<<d.Electron_PT[i]<<endl;
@@ -147,14 +156,15 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	float eta = d.Electron_Eta[i];
 	plot1D("h_elpt", pt,  evtweight_, h_1d, "pT [GeV]", 40, 0, 400);
 	if (pt < 5) continue;
-	if (eta>1.9549165 && eta<1.9549167) continue; // Hot Spot
-	if (eta>-2.566041 && eta<-2.566039) continue; // Hot Spot
-	if (eta>-0.391368 && eta<-0.391366) continue; // Hot Spot
-	if (eta>0.1128721 && eta<0.1128723) continue; // Hot Spot
+	//if (eta>1.9549165 && eta<1.9549167) continue; // Hot Spot
+	//if (eta>-2.566041 && eta<-2.566039) continue; // Hot Spot
+	//if (eta>-0.391368 && eta<-0.391366) continue; // Hot Spot
+	//if (eta>0.1128721 && eta<0.1128723) continue; // Hot Spot
 	nlep_++;
 	part lep;
 	lep.vec.SetPtEtaPhiM(pt,d.Electron_Eta[i],d.Electron_Phi[i],0);
 	lep.id = -11 * d.Electron_Charge[i];
+	lep.mt = MT(pt, d.Electron_Phi[i], d.PuppiMissingET_MET[0], d.PuppiMissingET_Phi[0]);
 	if (d.Electron_IsolationVarRhoCorr[i]/pt > 0.1 || pt < 20) {
 	  leptonsVeto_.push_back(lep);
 	}
@@ -164,8 +174,9 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	}
       }
 
+      if (verbose) cout <<__LINE__ << endl;
 
-      HT2p5_ = 0, HT_ = 0, njet30central_ = 0, njet30forward_ = 0, njet30_ = 0;
+      HT2p5_ = 0, HT_ = 0, njet30central_ = 0, njet30forward_ = 0, njet30_ = 0, nbjet30_ = 0;
       for ( int i = 0; i < d.JetPUPPI_ ; ++i) {
 	// Overlap Removal
 	for ( int j = 0; j < d.Electron_ ; ++j) {
@@ -187,10 +198,12 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	  else njet30forward_++;
 	  HT_ += pt;
 	  njet30_++;
+	  if (d.JetPUPPI_BTag[i] & (1 << 1)) nbjet30_++;
 	}
 	    
       }
-      
+            if (verbose) cout <<__LINE__ << endl;
+
       MET_ = d.PuppiMissingET_MET[0];
 
       // Require dileptons
@@ -228,6 +241,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	  }
 	}
       }
+      if (verbose) cout <<__LINE__ << endl;
 
        // Classify MultiBoson backgrounds
       int nWp = 0, nWm = 0, nW = 0, nZ = 0;
@@ -254,7 +268,8 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
       fillHistos(h_1d_Zveto, "Zveto", ""); // Veto OS Z
       if (nlep_!=2) continue;
       fillHistos(h_1d_lepVeto, "lepVeto", ""); // Veto 3rd lepton in general
-
+      if (nbjet30_>0) continue;
+      fillHistos(h_1d_bVeto, "bVeto", ""); // Veto b-jets
 
       if (njet30_>2)  fillHistos(h_1d_2j, "2Jets", ""); // Now fill histos with some cuts
 
@@ -330,6 +345,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
   savePlotsDir(h_1d_SSWW, outfile_, "SSWW");
   savePlotsDir(h_1d_OSWW, outfile_, "OSWW");
   savePlotsDir(h_1d_lepVeto, outfile_, "lepVeto");
+  savePlotsDir(h_1d_bVeto, outfile_, "bVeto");
   savePlotsDir(h_1d_Zveto, outfile_, "Zveto");
   outfile_->Write();
   outfile_->Close();
@@ -351,11 +367,13 @@ void DelphesLooper::fillHistos(std::map<std::string, TH1*>& h_1d, const std::str
   plot1D("h_njet30central"+s, njet30central_ ,  evtweight_, h_1d, "N_j central", 10, -0.5, 9.5);
   plot1D("h_njet30forward"+s, njet30forward_ ,  evtweight_, h_1d, "N_j forward", 10, -0.5, 9.5);
   plot1D("h_njet30"+s, njet30_,  evtweight_, h_1d, "N_j", 10, -0.5, 9.5);
+  plot1D("h_nbjet30"+s, nbjet30_,  evtweight_, h_1d, "N_j", 10, -0.5, 9.5);
   plot1D("h_BBtype"+s, BBtype_,  evtweight_, h_1d, "BB type [Other, WZ, ZZ, SSWW, OSWW]", 10, -0.5, 9.5);
   plot1D("h_MET"+s, MET_,  evtweight_, h_1d, "pT [GeV]", 200, 0, 2000);
   plot1D("h_nlep"+s, nlep_,  evtweight_, h_1d, "Nlep",10, -0.5, 9.5);
   plot1D("h_nlepIso"+s, nlepIso_,  evtweight_, h_1d, "Nlep(iso)", 10, -0.5, 9.5);
   float mtmin = 999.;
+  int nmu = 0, nele = 0;
   for ( unsigned int i = 0; i < leptons_.size() ; ++i) {
     const std::string istring = std::to_string(i);
     plot1D("h_leppt"+istring+s, leptons_[i].vec.Pt(),  evtweight_, h_1d, "Lep pT", 100, 0, 100);
@@ -363,12 +381,21 @@ void DelphesLooper::fillHistos(std::map<std::string, TH1*>& h_1d, const std::str
     if (fabs(leptons_[i].id)==13) plot1D("h_lepetamu"+s, leptons_[i].vec.Eta(),  evtweight_, h_1d, "Lep eta", 40, -5, 5);
     plot1D("h_lepmt"+istring+s, leptons_[i].mt,  evtweight_, h_1d, "Lep MT", 100, 0, 200);
     if (leptons_[i].mt < mtmin) mtmin = leptons_[i].mt;
+    if (fabs(leptons_[i].id)==13) nmu++;
+    if (fabs(leptons_[i].id)==11) nele++;
   }
+  int type = nmu>1 ? 1 : nele>1 ? 3 : (nmu==1 && nele==1) ? 2 : -1; // mm=1, em=2, ee=3
+  const std::string stype = type==1 ? "mm" : (type==2 ? "em" : (type==3 ? "ee" : "other"));
+  plot1D("h_type"+s, type,  evtweight_, h_1d, "mm,em,ee",6, -2, 4);
+
+
   for ( unsigned int i = 0; i < leptonsVeto_.size() ; ++i) {
     if (fabs(leptons_[i].id)==13) plot1D("h_lepetamu"+s, leptonsVeto_[i].vec.Eta(),  evtweight_, h_1d, "Lep eta", 40, -5, 5);
   }
 
-  plot1D("h_mtmin"+s, mtmin,  evtweight_, h_1d, "MTmin", 100, 0, 200);
+
+  plot1D("h_mtmin"+s, mtmin,  evtweight_, h_1d, "MTmin", 150, 0, 300);
+  plot1D("h_mtmin"+stype+s, mtmin,  evtweight_, h_1d, "MTmin", 150, 0, 300);
 
 
   return;
