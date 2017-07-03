@@ -73,7 +73,7 @@ float DelphesLooper::MT(float pt1, float phi1, float pt2, float phi2){
 void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_dir, float xsec, int nevt){
 
   //  evtweight_ = lumi*xsec*1000./nevt; //xsec in fb
-  evtweight_ = lumi*xsec*1./nevt; //xsec in pb
+  float xsec_evtweight = lumi*xsec*1./nevt; //xsec in pb
   cout << "[DelphesLooper::loop] Event weight for this sample, "<<sample<<", is "<<evtweight_<<endl;
 
   //Set up loop over chain
@@ -125,6 +125,12 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
       // Progress
       progress(nEventsDone, nEventsToDo);
 
+      evtweight_ = xsec_evtweight;
+      if (d.Event_Weight[0] > 0.01 && d.Event_Weight[0] < 100) {
+	evtweight_ *= d.Event_Weight[0];
+      }
+      else cout<<"Strange event weight: "<< d.Event_Weight[0] << endl;
+
       nlep_=0, nlepIso_=0;
       leptons_.clear();
       leptonsVeto_.clear();
@@ -150,11 +156,13 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
       }
       if (verbose) cout <<__LINE__ << endl;
 
+      //      cout<<"About to loop over "<<d.Electron_<<" electrons. Alternative counter is "<<d.Electron_size<<endl; 
+
       for ( int i = 0; i < d.Electron_ ; ++i) {
 	//cout<<d.Electron_PT[i]<<endl;
 	float pt = d.Electron_PT[i];
 	float eta = d.Electron_Eta[i];
-	plot1D("h_elpt", pt,  evtweight_, h_1d, "pT [GeV]", 40, 0, 400);
+	//plot1D("h_elpt", pt,  evtweight_, h_1d, "pT [GeV]", 40, 0, 400);
 	if (pt < 5) continue;
 	//if (eta>1.9549165 && eta<1.9549167) continue; // Hot Spot
 	//if (eta>-2.566041 && eta<-2.566039) continue; // Hot Spot
@@ -176,7 +184,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 
       if (verbose) cout <<__LINE__ << endl;
 
-      HT2p5_ = 0, HT_ = 0, njet30central_ = 0, njet30forward_ = 0, njet30_ = 0, nbjet30_ = 0;
+      HT1p5_ = 0, HT2p5_ = 0, HT_ = 0, njet30barrel_ = 0, njet30central_ = 0, njet30forward_ = 0, njet30_ = 0, nbjet30_ = 0;
       for ( int i = 0; i < d.JetPUPPI_ ; ++i) {
 	// Overlap Removal
 	for ( int j = 0; j < d.Electron_ ; ++j) {
@@ -191,9 +199,15 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	float pt = d.JetPUPPI_PT[i];
 	plot1D("h_jetpt", pt,  evtweight_, h_1d, "pT [GeV]", 200, 0, 500);
 	if (pt>30) {
+	  plot1D("h_jeteta", d.JetPUPPI_Eta[i],  evtweight_, h_1d, "pT [GeV]", 100, -5, 5);
+
 	  if (fabs(d.JetPUPPI_Eta[i]) < 2.5 ) {
 	    HT2p5_ += pt;
 	    njet30central_++;
+	    if (fabs(d.JetPUPPI_Eta[i]) < 1.5 ) {
+	      HT1p5_ += pt;
+	      njet30barrel_++;
+	    }
 	  }
 	  else njet30forward_++;
 	  HT_ += pt;
@@ -205,6 +219,9 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
             if (verbose) cout <<__LINE__ << endl;
 
       MET_ = d.PuppiMissingET_MET[0];
+
+      plot1D("h_nlepIso", nlepIso_,  evtweight_, h_1d, "NlepIso",10, -0.5, 9.5);
+
 
       // Require dileptons
       if (nlepIso_<2) continue;
@@ -244,41 +261,42 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
       if (verbose) cout <<__LINE__ << endl;
 
        // Classify MultiBoson backgrounds
-      int nWp = 0, nWm = 0, nW = 0, nZ = 0;
+      int nWp = 0, nWm = 0, nW = 0, nH = 0, nZ = 0, nTop = 0;
       for ( int i = 0; i < d.Particle_ ; ++i) {
 	//cout<<d.Particle_PID[i]<<" "<<d.Particle_Status[i]<<endl;
 	if (d.Particle_PID[i]==23  && d.Particle_Status[i]==22) nZ++;
+	if (d.Particle_PID[i]==25  && d.Particle_Status[i]==22) nH++;
 	if (d.Particle_PID[i]==24  && d.Particle_Status[i]==22) nWp++;
 	if (d.Particle_PID[i]==-24 && d.Particle_Status[i]==22) nWm++;
+	if (fabs(d.Particle_PID[i])==6 && d.Particle_Status[i]==22) nTop++;
       }
       nW = nWp + nWm;
-      //cout<<"Finished looking at particles. nW "<<nW<<" and nZ "<<nZ<<endl;
       
-      // Categories: WZ, ZZ, SSWW, OSWW
+
+
+      // WWW, WWZ/WZZ/ZZZ = VVZ, VH, WW, WZ, ZZ, ttW, ttZ
+
       BBtype_ = 0;
-      if (nW==1 && nZ == 1)  BBtype_ = 1;
-      else if (nZ == 2)      BBtype_ = 2;
-      else if (nW == 2) {
-	if      (nWp==2 || nWm==2)  BBtype_ = 3;
-	else if (nWp==1 && nWm==1)  BBtype_ = 4;
+      if (nW==3)  BBtype_ = 1; //WWW
+      else if (nW+nZ==3) BBtype_ = 2; //VVZ
+      else if (nH>0)   BBtype_ = 3; //VH
+      else if (nW==2)  BBtype_ = 4; //WW
+      else if (nW==1 && nZ==1)  BBtype_ = 5; //WZ
+      else if (nZ==2)  BBtype_ = 6; //ZZ
+      if (nTop==2 ) {
+	if (nW==3) BBtype_ = 7;
+	else       BBtype_ = 8;
       }
+      
+      if (BBtype_ == 0 && nW+nZ+nH>1) 
+	cout<<"nW="<<nW<<", nZ="<<nZ<<", nTop="<<nTop<<", nH="<<nH<<endl;
 
-      fillHistos(h_1d_base, "Base", ""); // SS dileptons
-      if (hasOSZ) continue;
-      fillHistos(h_1d_Zveto, "Zveto", ""); // Veto OS Z
-      if (nlep_!=2) continue;
-      fillHistos(h_1d_lepVeto, "lepVeto", ""); // Veto 3rd lepton in general
-      if (nbjet30_>0) continue;
-      fillHistos(h_1d_bVeto, "bVeto", ""); // Veto b-jets
 
-      if (njet30_>2)  fillHistos(h_1d_2j, "2Jets", ""); // Now fill histos with some cuts
+      if (verbose) cout << evtweight_ <<" "<< HT_ <<" "<< nlep_ <<endl;
 
-     
-      // Full plots for each diboson category
-      if (BBtype_==1)        {
-	fillHistos(h_1d_WZ, "WZ", ""); 
+      // Make plots before lepton veto
+      if (BBtype_==5)        {
 	// GenLevel study of WZ events
-	cout<<"WZ event survived lepton veto! Why?"<<endl;
 	for ( int i = 0; i < d.Particle_ ; ++i) {
 	  if (d.Particle_Status[i]!=1) continue;
 	  if (fabs(d.Particle_PID[i])!=11 && fabs(d.Particle_PID[i])!=13 && fabs(d.Particle_PID[i])!=15 ) continue;
@@ -286,13 +304,13 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	  //cout<<d.Particle_PID[i]<<" "<<d.Particle_Status[i]<<" "<<d.Particle_PT[i]<<" "<<d.Particle_Eta[i]<<endl;
 	  float isel = fabs(d.Particle_PID[i])==11;
 	  float ismu = fabs(d.Particle_PID[i])==13;
-	  plot1D("h_genLepID", d.Particle_PID[i],  evtweight_, h_1d, "mLL [GeV]", 40, -20, 20);
-	  plot1D("h_genLepPT", d.Particle_PT[i],  evtweight_, h_1d, "mLL [GeV]", 100, 0, 100);
-	  plot1D("h_genLepEta", d.Particle_Eta[i],  evtweight_, h_1d, "mLL [GeV]",  40, -5, 5);
-	  if (isel) plot1D("h_genLepEtaEl", d.Particle_Eta[i],  evtweight_, h_1d, "mLL [GeV]",  40, -5, 5);
-	  if (ismu) plot1D("h_genLepEtaMu", d.Particle_Eta[i],  evtweight_, h_1d, "mLL [GeV]",  40, -5, 5);
-	  if (ismu && pt>5) plot1D("h_genLepEtaMuPt5", d.Particle_Eta[i],  evtweight_, h_1d, "mLL [GeV]",  40, -5, 5);
-	  plot1D("h_genLepPhi", d.Particle_Phi[i],  evtweight_, h_1d, "mLL [GeV]",  40, -3.2, 3.2);
+	  plot1D("hBeforeLepVeto_genLepID", d.Particle_PID[i],  evtweight_, h_1d, "ID", 40, -20, 20);
+	  plot1D("hBeforeLepVeto_genLepPT", d.Particle_PT[i],  evtweight_, h_1d, "pT [GeV]", 100, 0, 100);
+	  plot1D("hBeforeLepVeto_genLepEta", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	  if (isel) plot1D("hBeforeLepVeto_genLepEtaEl", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	  if (ismu) plot1D("hBeforeLepVeto_genLepEtaMu", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	  if (ismu && pt>5) plot1D("hBeforeLepVeto_genLepEtaMuPt5", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	  plot1D("hBeforeLepVeto_genLepPhi", d.Particle_Phi[i],  evtweight_, h_1d, "Phi",  40, -3.2, 3.2);
 
 	  // Find the "lost lepton"
 	  bool found = false;
@@ -306,22 +324,87 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	    if (d.Particle_PID[i] == leptonsVeto_[j].id && fabs(d.Particle_PT[i]-leptonsVeto_[j].vec.Pt()) < 1 && fabs(d.Particle_Eta[i]-leptonsVeto_[j].vec.Eta())<0.1 ) found = true; // Matched!
 	  }
 	  if (!found) {
-	    cout<<"Unmatched GenLep "<<d.Particle_PID[i]<<" "<<d.Particle_Status[i]<<" "<<d.Particle_PT[i]<<" "<<d.Particle_Eta[i]<<endl;
-	    plot1D("h_lostLepID", d.Particle_PID[i],  evtweight_, h_1d, "mLL [GeV]", 40, -20, 20);
-	    plot1D("h_lostLepPT", d.Particle_PT[i],  evtweight_, h_1d, "mLL [GeV]", 100, 0, 100);
-	    if (ismu) plot1D("h_lostLepEtaMu", d.Particle_Eta[i],  evtweight_, h_1d, "mLL [GeV]",  40, -5, 5);
-	    if (ismu && pt>5) plot1D("h_lostLepEtaMuPt5", d.Particle_Eta[i],  evtweight_, h_1d, "mLL [GeV]",  40, -5, 5);
-	    plot1D("h_lostLepPhi", d.Particle_Phi[i],  evtweight_, h_1d, "mLL [GeV]",  40, -3.2, 3.2);
+	    plot1D("hBeforeLepVeto_lostLepID", d.Particle_PID[i],  evtweight_, h_1d, "ID", 40, -20, 20);
+	    plot1D("hBeforeLepVeto_lostLepPT", d.Particle_PT[i],  evtweight_, h_1d, "pT [GeV]", 100, 0, 100);
+	    if (ismu) plot1D("hBeforeLepVeto_lostLepEtaMu", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	    if (ismu && pt>5) plot1D("hBeforeLepVeto_lostLepEtaMuPt5", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	    plot1D("hBeforeLepVeto_lostLepPhi", d.Particle_Phi[i],  evtweight_, h_1d, "Phi",  40, -3.2, 3.2);
 	  }
 	  else if (found) {
-	    if (ismu && pt>5) plot1D("h_foundLepEtaMuPt5", d.Particle_Eta[i],  evtweight_, h_1d, "mLL [GeV]",  40, -5, 5);
+	    if (ismu && pt>5) plot1D("hBeforeLepVeto_foundLepEtaMuPt5", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
 	  }
 
 	}
       }
-      else if (BBtype_==2)   fillHistos(h_1d_ZZ, "ZZ", ""); 
-      else if (BBtype_==3)   fillHistos(h_1d_SSWW, "SSWW", "");
-      else if (BBtype_==4)   fillHistos(h_1d_OSWW, "OSWW", "");
+
+      fillHistos(h_1d_base, "Base", ""); // SS dileptons
+      if (hasOSZ) continue;
+      fillHistos(h_1d_Zveto, "Zveto", ""); // Veto OS Z
+      if (nlep_!=2) continue;
+      fillHistos(h_1d_lepVeto, "lepVeto", ""); // Veto 3rd lepton in general
+      if (nbjet30_>0) continue;
+      fillHistos(h_1d_bVeto, "bVeto", ""); // Veto b-jets
+      if (njet30_>3) continue;
+      fillHistos(h_1d_j4Veto, "j4Veto", ""); // Veto 4th jet
+
+      if (njet30_>2)  fillHistos(h_1d_2j, "2Jets", ""); // Now fill histos with some cuts
+
+     
+      // Full plots for each diboson category
+      if (BBtype_==5)        {
+	fillHistos(h_1d_WZ, "WZ", ""); 
+	// GenLevel study of WZ events
+	//cout<<"WZ event survived lepton veto! Why?"<<endl;
+	for ( int i = 0; i < d.Particle_ ; ++i) {
+	  if (d.Particle_Status[i]!=1) continue;
+	  if (fabs(d.Particle_PID[i])!=11 && fabs(d.Particle_PID[i])!=13 && fabs(d.Particle_PID[i])!=15 ) continue;
+	  float pt = d.Particle_PT[i];
+	  //cout<<d.Particle_PID[i]<<" "<<d.Particle_Status[i]<<" "<<d.Particle_PT[i]<<" "<<d.Particle_Eta[i]<<endl;
+	  float isel = fabs(d.Particle_PID[i])==11;
+	  float ismu = fabs(d.Particle_PID[i])==13;
+	  plot1D("h_genLepID", d.Particle_PID[i],  evtweight_, h_1d, "ID", 40, -20, 20);
+	  plot1D("h_genLepPT", d.Particle_PT[i],  evtweight_, h_1d, "pT [GeV]", 100, 0, 100);
+	  plot1D("h_genLepEta", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	  if (isel) plot1D("h_genLepEtaEl", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	  if (ismu) plot1D("h_genLepEtaMu", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	  if (ismu && pt>5) plot1D("h_genLepEtaMuPt5", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	  plot1D("h_genLepPhi", d.Particle_Phi[i],  evtweight_, h_1d, "Phi",  40, -3.2, 3.2);
+
+	  // Find the "lost lepton"
+	  bool found = false;
+	  //cout<<"GenLep "<<d.Particle_PID[i]<<" "<<d.Particle_Status[i]<<" "<<d.Particle_PT[i]<<" "<<d.Particle_Eta[i]<<endl;
+	  for ( unsigned int j = 0; j < leptons_.size() ; ++j) {
+	    //cout<<"Lep "<<leptons_[j].id<<" "<<leptons_[j].vec.Pt()<<" "<<leptons_[j].vec.Eta()<<endl;
+	    if (d.Particle_PID[i] == leptons_[j].id && fabs(d.Particle_PT[i]-leptons_[j].vec.Pt()) < 1 && fabs(d.Particle_Eta[i]-leptons_[j].vec.Eta())<0.1 ) found = true; // Matched!
+	  }
+	  for ( unsigned int j = 0; j < leptonsVeto_.size() ; ++j) {
+	    //cout<<"Lep "<<leptons_[j].id<<" "<<leptons_[j].vec.Pt()<<" "<<leptons_[j].vec.Eta()<<endl;
+	    if (d.Particle_PID[i] == leptonsVeto_[j].id && fabs(d.Particle_PT[i]-leptonsVeto_[j].vec.Pt()) < 1 && fabs(d.Particle_Eta[i]-leptonsVeto_[j].vec.Eta())<0.1 ) found = true; // Matched!
+	  }
+	  if (!found) {
+	    //cout<<"Unmatched GenLep "<<d.Particle_PID[i]<<" "<<d.Particle_Status[i]<<" "<<d.Particle_PT[i]<<" "<<d.Particle_Eta[i]<<endl;
+	    plot1D("h_lostLepID", d.Particle_PID[i],  evtweight_, h_1d, "ID", 40, -20, 20);
+	    plot1D("h_lostLepPT", d.Particle_PT[i],  evtweight_, h_1d, "oT [GeV]", 100, 0, 100);
+	    if (ismu) plot1D("h_lostLepEtaMu", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	    if (ismu && pt>5) plot1D("h_lostLepEtaMuPt5", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	    plot1D("h_lostLepPhi", d.Particle_Phi[i],  evtweight_, h_1d, "Phi",  40, -3.2, 3.2);
+	  }
+	  else if (found) {
+	    if (ismu && pt>5) plot1D("h_foundLepEtaMuPt5", d.Particle_Eta[i],  evtweight_, h_1d, "Eta",  40, -5, 5);
+	  }
+
+	}
+      }
+      else if (BBtype_==1)   fillHistos(h_1d_WWW, "WWW", "");
+      else if (BBtype_==2)   fillHistos(h_1d_VVZ, "VVZ", "");
+      else if (BBtype_==3)   fillHistos(h_1d_VH, "VH", ""); // from BBB sample
+      else if (BBtype_==4)   fillHistos(h_1d_WW, "WW", "");
+//      else if (BBtype_==3)   fillHistos(h_1d_SSWW, "SSWW", "");
+//      else if (BBtype_==4)   fillHistos(h_1d_OSWW, "OSWW", "");
+      else if (BBtype_==6)   fillHistos(h_1d_ZZ, "ZZ", ""); 
+      else if (BBtype_==7)   fillHistos(h_1d_ttW, "ttW", "");
+      else if (BBtype_==8)   fillHistos(h_1d_ttZ, "ttZ", "");
+      else if (BBtype_==0)   fillHistos(h_1d_other, "other", "");
       
       //      if (mtmin < 120) continue;
 
@@ -342,10 +425,16 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
   savePlotsDir(h_1d_2j, outfile_, "2Jets");
   savePlotsDir(h_1d_WZ, outfile_, "WZ");
   savePlotsDir(h_1d_ZZ, outfile_, "ZZ");
-  savePlotsDir(h_1d_SSWW, outfile_, "SSWW");
-  savePlotsDir(h_1d_OSWW, outfile_, "OSWW");
+  savePlotsDir(h_1d_WW, outfile_, "WW");
+  savePlotsDir(h_1d_VH, outfile_, "VH");
+  savePlotsDir(h_1d_WWW, outfile_, "WWW");
+  savePlotsDir(h_1d_VVZ, outfile_, "VVZ");
+  savePlotsDir(h_1d_ttW, outfile_, "ttW");
+  savePlotsDir(h_1d_ttZ, outfile_, "ttZ");
+  savePlotsDir(h_1d_other, outfile_, "other");
   savePlotsDir(h_1d_lepVeto, outfile_, "lepVeto");
   savePlotsDir(h_1d_bVeto, outfile_, "bVeto");
+  savePlotsDir(h_1d_j4Veto, outfile_, "j4Veto");
   savePlotsDir(h_1d_Zveto, outfile_, "Zveto");
   outfile_->Write();
   outfile_->Close();
@@ -362,8 +451,10 @@ void DelphesLooper::fillHistos(std::map<std::string, TH1*>& h_1d, const std::str
   } 
   dir->cd();
 
+  plot1D("h_HT1p5"+s, HT1p5_,  evtweight_, h_1d, "HT barrel [GeV]", 200, 0, 2000);
   plot1D("h_HT2p5"+s, HT2p5_,  evtweight_, h_1d, "HT central [GeV]", 200, 0, 2000);
   plot1D("h_HTfull"+s, HT_,  evtweight_, h_1d, "HT [GeV]", 200, 0, 2000);
+  plot1D("h_njet30barrel"+s, njet30barrel_ ,  evtweight_, h_1d, "N_j barrel", 10, -0.5, 9.5);
   plot1D("h_njet30central"+s, njet30central_ ,  evtweight_, h_1d, "N_j central", 10, -0.5, 9.5);
   plot1D("h_njet30forward"+s, njet30forward_ ,  evtweight_, h_1d, "N_j forward", 10, -0.5, 9.5);
   plot1D("h_njet30"+s, njet30_,  evtweight_, h_1d, "N_j", 10, -0.5, 9.5);

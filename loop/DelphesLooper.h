@@ -47,8 +47,10 @@ class DelphesLooper {
   //Delphes t;
   float evtweight_;
 
+  float HT1p5_;
   float HT2p5_;
   float HT_;
+  int njet30barrel_;
   int njet30central_;
   int njet30forward_;
   int njet30_;
@@ -75,9 +77,17 @@ class DelphesLooper {
   std::map<std::string, TH1*> h_1d_ZZ;
   std::map<std::string, TH1*> h_1d_SSWW;
   std::map<std::string, TH1*> h_1d_OSWW;
+  std::map<std::string, TH1*> h_1d_WW;
+  std::map<std::string, TH1*> h_1d_VH;
+  std::map<std::string, TH1*> h_1d_WWW;
+  std::map<std::string, TH1*> h_1d_VVZ;
+  std::map<std::string, TH1*> h_1d_ttW;
+  std::map<std::string, TH1*> h_1d_ttZ;
   std::map<std::string, TH1*> h_1d_lepVeto;
   std::map<std::string, TH1*> h_1d_bVeto;
+  std::map<std::string, TH1*> h_1d_j4Veto;
   std::map<std::string, TH1*> h_1d_Zveto;
+  std::map<std::string, TH1*> h_1d_other;
 
 };
 

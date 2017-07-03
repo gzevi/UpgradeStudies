@@ -22,6 +22,7 @@ public :
    Int_t           fCurrent; //!current Tree number in a TChain
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
+   static const Int_t kMaxEvent = 1;
    static const Int_t kMaxParticle = 105;
    static const Int_t kMaxElectron = 6;
    static const Int_t kMaxMuonTight = 6;
@@ -31,6 +32,8 @@ public :
    static const Int_t kMaxScalarHT = 1;
 
    // Declaration of leaf types
+   Int_t           Event_;
+   Float_t         Event_Weight[kMaxEvent];   //[Event_]
    Int_t           Particle_;
    Int_t           Particle_PID[kMaxParticle];   //[Particle_]
    Int_t           Particle_Status[kMaxParticle];   //[Particle_]
@@ -71,6 +74,8 @@ public :
    Float_t         ScalarHT_HT[kMaxScalarHT];   //[ScalarHT_]
 
    // List of branches
+   TBranch        *b_Event_;   //!
+   TBranch        *b_Event_Weight;   //!
    TBranch        *b_Particle_;   //!
    TBranch        *b_Particle_PID;   //!
    TBranch        *b_Particle_Status;   //!
@@ -180,6 +185,8 @@ void Delphes::Init(TTree *tree)
    fCurrent = -1;
    fChain->SetMakeClass(1);
 
+   fChain->SetBranchAddress("Event", &Event_, &b_Event_);
+   fChain->SetBranchAddress("Event.Weight", Event_Weight, &b_Event_Weight);
    fChain->SetBranchAddress("Particle", &Particle_, &b_Particle_);
    fChain->SetBranchAddress("Particle.PID", Particle_PID, &b_Particle_PID);
    fChain->SetBranchAddress("Particle.Status", Particle_Status, &b_Particle_Status);
