@@ -15,7 +15,11 @@ void skim(string inpath = "/nfs-6/userdata/mt2/V00-00-03", string outpath = "/tm
   //--------------------------------------------------
 
   // Test: request that the two leading muons are isolated and same-sign
-  const char* sel = "MuonTight[0].IsolationVarRhoCorr/MuonTight[0].PT<0.1 && MuonTight[1].IsolationVarRhoCorr/MuonTight[1].PT<0.1 && MuonTight[0].Charge*MuonTight[1].Charge>0";
+  //  const char* sel = "MuonTight[0].IsolationVarRhoCorr/MuonTight[0].PT<0.1 && MuonTight[1].IsolationVarRhoCorr/MuonTight[1].PT<0.1 && MuonTight[0].Charge*MuonTight[1].Charge>0";
+  // Very loose skim: two leptons
+  //const char* sel = "Electron_size+MuonLoose_size>1";
+  // Synch with Basil: two isolated muons
+  const char* sel = "MuonTight[0].IsolationVarRhoCorr/MuonTight[0].PT<0.5 && MuonTight[0].IsolationVarRhoCorr < 5  && MuonTight[1].IsolationVarRhoCorr/MuonTight[1].PT<0.5 && MuonTight[1].IsolationVarRhoCorr < 5 && MuonTight[0].PT>20 && MuonTight[1].PT>20 && fabs(MuonTight[0].Eta)<2.5 && fabs(MuonTight[1].Eta)<2.5";
 
   cout << "Skimming with selection : "<<sel<<endl;
 
@@ -66,16 +70,19 @@ void skim(string inpath = "/nfs-6/userdata/mt2/V00-00-03", string outpath = "/tm
   // slim
   //-------------------
   chain->SetBranchStatus("*",0);
+  chain->SetBranchStatus("Event.Weight",1);   
   chain->SetBranchStatus("MuonTight.PT",1);
   chain->SetBranchStatus("MuonTight.Eta",1);
   chain->SetBranchStatus("MuonTight.Phi",1);
   chain->SetBranchStatus("MuonTight.Charge",1);
   chain->SetBranchStatus("MuonTight.IsolationVarRhoCorr",1);
   chain->SetBranchStatus("MuonLoose.PT",1);
+  chain->SetBranchStatus("MuonLoose_size",1);
   chain->SetBranchStatus("MuonLoose.Eta",1);
   chain->SetBranchStatus("MuonLoose.Phi",1);
   chain->SetBranchStatus("MuonLoose.Charge",1);
   chain->SetBranchStatus("MuonLoose.IsolationVarRhoCorr",1);
+  chain->SetBranchStatus("Electron_size",1);
   chain->SetBranchStatus("Electron.PT",1);
   chain->SetBranchStatus("Electron.Eta",1);
   chain->SetBranchStatus("Electron.Phi",1);

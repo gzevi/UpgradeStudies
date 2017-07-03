@@ -70,6 +70,7 @@ void advancedskim(string inpath = "/nfs-6/userdata/mt2/V00-00-03", string outpat
   // slim
   //-------------------
   chain->SetBranchStatus("*",0);
+  chain->SetBranchStatus("Event.Weight",1);   
   chain->SetBranchStatus("MuonTight.PT",1);
   chain->SetBranchStatus("MuonTight.Eta",1);
   chain->SetBranchStatus("MuonTight.Phi",1);
