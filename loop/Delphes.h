@@ -30,6 +30,8 @@ public :
    static const Int_t kMaxJetPUPPI = 18;
    static const Int_t kMaxPuppiMissingET = 1;
    static const Int_t kMaxScalarHT = 1;
+   static const Int_t kMaxGenMissingET = 1;
+
 
    // Declaration of leaf types
    Int_t           Event_;
@@ -72,6 +74,9 @@ public :
    Float_t         PuppiMissingET_Phi[kMaxPuppiMissingET];   //[PuppiMissingET_]
    Int_t           ScalarHT_;
    Float_t         ScalarHT_HT[kMaxScalarHT];   //[ScalarHT_]
+   Int_t           GenMissingET_;
+   Float_t         GenMissingET_MET[kMaxGenMissingET];   //[GenMissingET_]
+   Float_t         GenMissingET_Phi[kMaxGenMissingET];   //[GenMissingET_]
 
    // List of branches
    TBranch        *b_Event_;   //!
@@ -114,6 +119,9 @@ public :
    TBranch        *b_PuppiMissingET_Phi;   //!
    TBranch        *b_ScalarHT_;   //!
    TBranch        *b_ScalarHT_HT;   //!
+   TBranch        *b_GenMissingET_;   //!
+   TBranch        *b_GenMissingET_MET;   //!
+   TBranch        *b_GenMissingET_Phi;   //!
 
    Delphes(TTree *tree=0);
    virtual ~Delphes();
@@ -225,6 +233,9 @@ void Delphes::Init(TTree *tree)
    fChain->SetBranchAddress("PuppiMissingET.Phi", PuppiMissingET_Phi, &b_PuppiMissingET_Phi);
    fChain->SetBranchAddress("ScalarHT", &ScalarHT_, &b_ScalarHT_);
    fChain->SetBranchAddress("ScalarHT.HT", ScalarHT_HT, &b_ScalarHT_HT);
+   fChain->SetBranchAddress("GenMissingET", &GenMissingET_, &b_GenMissingET_);
+   fChain->SetBranchAddress("GenMissingET.MET", GenMissingET_MET, &b_GenMissingET_MET);
+   fChain->SetBranchAddress("GenMissingET.Phi", GenMissingET_Phi, &b_GenMissingET_Phi);
    Notify();
 }
 

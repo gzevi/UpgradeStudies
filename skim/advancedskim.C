@@ -104,6 +104,7 @@ void advancedskim(string inpath = "/nfs-6/userdata/mt2/V00-00-03", string outpat
   chain->SetBranchStatus("Particle.Eta",1);
   chain->SetBranchStatus("Particle.Phi",1);
   chain->SetBranchStatus("Particle.Status",1);
+  chain->SetBranchStatus("Particle.Mass",1);
 //  chain->SetBranchStatus("Particle.M1",1);// Useless because the CMS skim breaks mother-daughter connections: https://github.com/delphes/delphes/blob/master/modules/StatusPidFilter.cc
 //  chain->SetBranchStatus("Particle.M2",1);
 
@@ -124,8 +125,8 @@ void advancedskim(string inpath = "/nfs-6/userdata/mt2/V00-00-03", string outpat
   reader.SetTree(chain);
   TTreeReaderArray<Float_t> Electron_PT      = {reader, "Electron.PT"};
   TTreeReaderArray<Int_t> Electron_Charge  = {reader, "Electron.Charge"};
-  TTreeReaderArray<Float_t> MuonTight_PT     = {reader, "MuonTight.PT"};
-  TTreeReaderArray<Int_t> MuonTight_Charge = {reader, "MuonTight.Charge"};
+  TTreeReaderArray<Float_t> MuonLoose_PT     = {reader, "MuonLoose.PT"};
+  TTreeReaderArray<Int_t> MuonLoose_Charge = {reader, "MuonLoose.Charge"};
 
   unsigned int nEventsTree = chain->GetEntriesFast();
 
@@ -146,10 +147,10 @@ void advancedskim(string inpath = "/nfs-6/userdata/mt2/V00-00-03", string outpat
       if (charge>0) nlepPos++;
       if (charge<0) nlepNeg++;
     }
-    for (unsigned int i = 0; i < MuonTight_PT.GetSize() ; ++i) {
+    for (unsigned int i = 0; i < MuonLoose_PT.GetSize() ; ++i) {
       //cout<<d->MuonTight_PT[i]<<endl;
-      float pt = MuonTight_PT[i];
-      int charge = MuonTight_Charge[i];
+      float pt = MuonLoose_PT[i];
+      int charge = MuonLoose_Charge[i];
       if (pt < 20) continue;
       if (charge>0) nlepPos++;
       if (charge<0) nlepNeg++;

@@ -33,7 +33,7 @@ LINKERFLAGS = $(shell root-config --ldflags --libs) -lEG -lGenVector -lTMVA -lRo
 
 DIR = ./
 
-SOURCES = PlotUtilities.C Delphes.C DelphesLooper.C runLooper.C 
+SOURCES = PlotUtilities.C Delphes.C MT2Utility.C MT2.C DelphesLooper.C runLooper.C 
 OBJECTS = $(SOURCES:.C=.o)
 LIB = libDelphesLooper.so
 

@@ -54,11 +54,24 @@ class DelphesLooper {
   int njet30central_;
   int njet30forward_;
   int njet30_;
+  float jet1pt_;
+  float jet2pt_;
   int nbjet30_;
+  float MT2_;
   float MET_;
+  float METphi_;
+  float GenMET_;
+  float METres_;
+  float METdiff_;
+
+
+  TLorentzVector METvecNoMu1p6_;
+  TLorentzVector METvecNoMu2p4_;
   int nlep_;
   int nlepIso_;
   int BBtype_;
+  std::string BBstring_;
+  float mtmin_;
 //  float lep1pt_;
 //  float lep1eta_;
 //  float lep1phi_;
@@ -71,6 +84,7 @@ class DelphesLooper {
 
   // One histogram map for every directory, plus a global one (h_1d)
   std::map<std::string, TH1*> h_1d;
+  std::map<std::string, TH1*> h_2d;
   std::map<std::string, TH1*> h_1d_base;
   std::map<std::string, TH1*> h_1d_2j;
   std::map<std::string, TH1*> h_1d_WZ;
@@ -85,7 +99,8 @@ class DelphesLooper {
   std::map<std::string, TH1*> h_1d_ttZ;
   std::map<std::string, TH1*> h_1d_lepVeto;
   std::map<std::string, TH1*> h_1d_bVeto;
-  std::map<std::string, TH1*> h_1d_j4Veto;
+  std::map<std::string, TH1*> h_1d_j2Veto;
+  std::map<std::string, TH1*> h_1d_mt120;
   std::map<std::string, TH1*> h_1d_Zveto;
   std::map<std::string, TH1*> h_1d_other;
 

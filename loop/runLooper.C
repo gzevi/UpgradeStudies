@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
     std::cout << "ERROR: nevt ("<<xsec<<") is very low. is this a real sample?" << std::endl;
     return 2;
   }
-  if (xsec < 0.0001 || xsec > 300000) {
+  if (xsec < 0.0001 || xsec > 300000000) {
     std::cout << "ERROR: xsec value ("<<xsec<<") is out of reasonable bounds. is this a real sample?" << std::endl;
     return 2;
   }

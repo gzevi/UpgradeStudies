@@ -429,6 +429,7 @@ void plot2D(string name, float xval, float yval, double weight, std::map<string,
     {
       TH2D* currentHisto= new TH2D(name.c_str(), title.c_str(), numbinsx, xmin, xmax, numbinsy, ymin, ymax);
       currentHisto->Sumw2();
+      currentHisto->SetDirectory(0);
       currentHisto->Fill(xval, yval, weight);
       allhistos.insert(std::pair<string, TH1*> (name,currentHisto) );
     }
@@ -450,6 +451,7 @@ void plot2D(string name, float xval, float yval, double weight, std::map<string,
     {
       TH2D* currentHisto= new TH2D(name.c_str(), title.c_str(), numbinsx, xbins, numbinsy, ybins);
       currentHisto->Sumw2();
+      currentHisto->SetDirectory(0);
       currentHisto->Fill(xval, yval, weight);
       allhistos.insert(std::pair<string, TH1*> (name,currentHisto) );
     }
@@ -470,6 +472,7 @@ void plot2D(string name, float xval, float yval, double weight, std::map<string,
     {
       TH2D* currentHisto= new TH2D(name.c_str(), title.c_str(), numbinsx, xmin, xmax, numbinsy, ymin, ymax);
       currentHisto->Sumw2();
+      currentHisto->SetDirectory(0);
       currentHisto->Fill(xval, yval, weight);
       allhistos.insert(std::pair<string, TH2D*> (name,currentHisto) );
     }
@@ -491,6 +494,7 @@ void plot2D(string name, float xval, float yval, double weight, std::map<string,
     {
       TH2D* currentHisto= new TH2D(name.c_str(), title.c_str(), numbinsx, xbins, numbinsy, ybins);
       currentHisto->Sumw2();
+      currentHisto->SetDirectory(0);
       currentHisto->Fill(xval, yval, weight);
       allhistos.insert(std::pair<string, TH2D*> (name,currentHisto) );
     }
