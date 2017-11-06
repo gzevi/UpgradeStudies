@@ -26,12 +26,13 @@ bool verbose = 0;
 bool synchronizemode = 0; // Example: make, then do: ./runLooper /home/gzevi//UpgradeSkims/advanced3Jul17weights/ BB-4p-0-300 output/weights_2Jul17/ 249977 18693008
 // Settings
 int lumi = 3000; // in fb
-float MuonEnd = 2.8; // 1.6, 2.4 or 2.8
+float MuonEnd = 1.6; // 1.6, 2.4 or 2.8
 
 //Efficiency bins
 const float xbins[6] = {20., 25., 30., 40., 50., 200.};
 const float ybinsEl[6] = {0., 0.8, 1.442, 1.556, 2.0, 2.5};
 const float ybinsMu[6] = {0., 0.9, 1.2, 2.1, 2.4, 2.8};
+
 
 void DelphesLooper::progress( int nEventsTotal, int nEventsChain ){
   int period = 1000;
@@ -137,7 +138,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
       progress(nEventsDone, nEventsToDo);
 
       evtweight_ = xsec_evtweight;
-      if (d.Event_Weight[0] > 0.01 && d.Event_Weight[0] < 100) {
+      if (fabs(d.Event_Weight[0]) > 0.01 && fabs(d.Event_Weight[0]) < 100) {
 	evtweight_ *= d.Event_Weight[0];
       }
       else cout<<"Strange event weight: "<< d.Event_Weight[0] << endl;
@@ -210,7 +211,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	lep.vec.SetPtEtaPhiM(pt,d.MuonLoose_Eta[i],d.MuonLoose_Phi[i],0);
 	lep.id = -13 * d.MuonLoose_Charge[i];
 	lep.mt = MT(pt, d.MuonLoose_Phi[i], d.PuppiMissingET_MET[0], d.PuppiMissingET_Phi[0]);
-	if (d.MuonLoose_IsolationVarRhoCorr[i] > 0.1 || pt < 20  || fabs(eta) > 1.6) { // inverted signal selection
+	if (/*d.MuonLoose_IsolationVarRhoCorr[i] > 0.1 ||*/ pt < 20  || fabs(eta) > 1.6) { // inverted signal selection
 	  leptonsVeto_.push_back(lep);
 	}
 	else {  // Signal selection
@@ -218,11 +219,11 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	  leptons_.push_back(lep);
 	}
 	// To plot efficiency, don't cut on eta
-	if (d.MuonLoose_IsolationVarRhoCorr[i] < 0.1 && pt > 20  ) { 
+	if (/*d.MuonLoose_IsolationVarRhoCorr[i] < 0.1 && */pt > 20  ) { 
 	  plot2D("h_MuIDEffNum", pt, fabs(eta), evtweight_, h_2d, "MuIDEffNum", 5, xbins, 5, ybinsMu);
 	}
       }
-      if (verbose) cout <<__LINE__ << endl;
+      if (verbose) cout <<__LINE__ <<" "<<evtweight_<< endl;
 
       //      cout<<"About to loop over "<<d.Electron_<<" electrons. Alternative counter is "<<d.Electron_size<<endl; 
 
@@ -243,7 +244,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	lep.vec.SetPtEtaPhiM(pt,d.Electron_Eta[i],d.Electron_Phi[i],0);
 	lep.id = -11 * d.Electron_Charge[i];
 	lep.mt = MT(pt, d.Electron_Phi[i], d.PuppiMissingET_MET[0], d.PuppiMissingET_Phi[0]);
-	if (d.Electron_IsolationVarRhoCorr[i] > 0.1 || pt < 20 || fabs(eta) > 1.6) {
+	if (/*d.Electron_IsolationVarRhoCorr[i] > 0.1 ||*/ pt < 20 || fabs(eta) > 1.6) {
 	  leptonsVeto_.push_back(lep);
 	}
 	else {
@@ -253,14 +254,34 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	}
       }
 
-      if (verbose) cout <<__LINE__ << endl;
+      if (verbose) cout <<__LINE__ <<" "<<evtweight_<< endl;
+
+
+      // Adjust lepton efficiency: undo Delphes and replace with Run 2
+      for ( unsigned int i = 0; i < leptons_.size() ; ++i) {
+	int id = abs(leptons_[i].id);
+	float pt = leptons_[i].vec.Pt();
+	float eta = leptons_[i].vec.Eta();
+	float delphesEff = GetPhase2EffTotal(id, pt, eta);
+	float run2Eff = GetRun2Eff(id, pt, eta);
+
+
+	if (verbose) std::cout<<"Found lepton with id/pt/eta: "<<id<<"/"<<pt<<"/"<<eta<<". Dividing by Delphes w "<<delphesEff<<" and multiplying by Run2 w "<<run2Eff<<". My event w goes from "<<evtweight_;
+
+	evtweight_ /= delphesEff > 0 ? delphesEff : 1.0;
+	evtweight_ *= run2Eff;
+	if (verbose) std::cout<<" to "<<evtweight_<<std::endl;
+
+	if (delphesEff <= 0 || run2Eff <= 0) std::cout<<"ERROR: Lepton efficiencies are Delphes "<<delphesEff<<" and Run2 "<<run2Eff<<std::endl;
+      }
+
 
       HT1p5_ = 0, HT2p5_ = 0, HT_ = 0, njet30barrel_ = 0, njet30central_ = 0, njet30forward_ = 0, njet30_ = 0, nbjet30_ = 0;
       jet1pt_ = 0, jet2pt_ = 0;
       vector<TLorentzVector> bjets;
       for ( int i = 0; i < d.JetPUPPI_ ; ++i) {
 	float pt = d.JetPUPPI_PT[i];
-	if (pt>25) {
+	if (pt>30) {
 	  // Overlap Removal
 	  bool overlap = false;
 	  for ( int j = 0; j < d.Electron_ ; ++j) {
@@ -301,7 +322,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	} //pT>30
 	    
       }
-            if (verbose) cout <<__LINE__ << endl;
+      if (verbose) cout <<__LINE__ <<" "<<evtweight_<< endl;
 
       MET_ = d.PuppiMissingET_MET[0];
       METphi_ = d.PuppiMissingET_Phi[0];
@@ -313,9 +334,6 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	  
 
       plot1D("h_nlepIso", nlepIso_,  evtweight_, h_1d, "NlepIso",10, -0.5, 9.5);
-
-
-
 
 
       // Require dileptons
@@ -427,6 +445,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
       lep2LV.SetPx( leptons_[1].vec.X()); lep2LV.SetPy( leptons_[1].vec.Y()); lep2LV.SetPz( leptons_[1].vec.Z()); lep2LV.SetE ( leptons_[1].vec.E());
       MT2_    = MT2( MET_   , METphi_   , lep1LV, lep2LV, 0.0 );
 
+      if (verbose) cout <<__LINE__ << endl;
 
       // Trilepton Mass
       if (maybeHasFSRZ && leptons_.size()>2 && MET_<50) {
@@ -436,8 +455,12 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	plot1D("h_trilepmass"+BBstring_, m,  evtweight_, h_1d, "mLLL [GeV]", 80, 0, 200);
       }
       
+      if (verbose) cout <<__LINE__ << endl;
+
 
       fillHistos(h_1d_base, "Base", ""); // SS dileptons
+
+      if (verbose) cout <<__LINE__ << endl;
 
       if (hasOSZ) continue; // CUT
 
@@ -454,6 +477,9 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
       int type = nmu>2 ? 1 : nele>2 ? 2 : (nmu==2 && nele==1) ? 3 : (nmu==1 && nele==2) ? 4 : (nmu==2) ? 5 : nele==2 ? 6 : (nmu==1 && nele==1) ? 7 : -1; // mmm=1, eee=2, mme=3, mee=4, mm=5, ee=6, em=7
       if (BBtype_==5) plot1D("h_WZtype_beforeVeto", type,  evtweight_, h_1d, "mmm,eee,mme,mee,mm,ee,em",10, -0.5, 9.5);
 
+      if (verbose) cout <<__LINE__ << endl;
+
+
       // Count true leptons
       nmu = 0;
       nele = 0;
@@ -465,6 +491,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
       int gentype = nmu>2 ? 1 : nele>2 ? 2 : (nmu==2 && nele==1) ? 3 : (nmu==1 && nele==2) ? 4 : (nmu==2) ? 5 : nele==2 ? 6 : (nmu==1 && nele==1) ? 7 : -1; // mmm=1, eee=2, mme=3, mee=4, mm=5, ee=6, em=7
       if (BBtype_==5) plot1D("h_WZgentype_beforeVeto", gentype,  evtweight_, h_1d, "mmm,eee,mme,mee,mm,ee,em",10, -0.5, 9.5);
 
+      if (verbose) cout <<__LINE__ << endl;
 
       //...... Make plots of found/lost leptons before lepton veto for WZ
       if (BBtype_==5 && gentype<=4)        {
@@ -523,10 +550,14 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	}
       } //...... End of plots of found/lost leptons before lepton veto for WZ
 
+      if (verbose) cout <<__LINE__ << endl;
+
 
       fillHistos(h_1d_Zveto, "Zveto", ""); // Veto OS Z
       if (nlep_!=2) continue; // CUT
       fillHistos(h_1d_lepVeto, "lepVeto", ""); // Veto 3rd lepton in general
+
+      if (verbose) cout <<__LINE__ << endl;
 
       if (BBtype_==5) plot1D("h_WZtype_afterVeto", type,  evtweight_, h_1d, "mmm,eee,mme,mee,mm,ee,em",10, -0.5, 9.5);
       if (BBtype_==5) plot1D("h_WZgentype_afterVeto", gentype,  evtweight_, h_1d, "mmm,eee,mme,mee,mm,ee,em",10, -0.5, 9.5);
@@ -619,6 +650,8 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	}
       }  //...... End of plots of found/lost leptons after lepton veto for WZ
 
+      if (verbose) cout <<__LINE__ << endl;
+
 
       //..... GenLevel study of ttW events to look at gen b-quarks
       if (BBtype_==7)        {
@@ -651,6 +684,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 	}
       }       //..... End of GenLevel study of ttW events to look at gen b-quarks
 
+      if (verbose) cout <<__LINE__ << endl;
 
 
       if (nbjet30_>0) continue; // CUT //
