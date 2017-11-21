@@ -7,7 +7,8 @@ mkdir -p ${LOGDIR}
 #OUTPATH=/home/gzevi/UpgradeSkims/advanced3Jul17weights
 #OUTPATH=/home/gzevi/UpgradeSkims/advanced12Jul17newDelphes
 #OUTPATH=/home/gzevi/UpgradeSkims/advanced17Jul17oldDelphesAddMass
-OUTPATH=/home/gzevi/UpgradeSkims/advanced15Aug17newC2N4
+#OUTPATH=/home/gzevi/UpgradeSkims/advanced15Aug17newC2N4
+OUTPATH=/home/gzevi/UpgradeSkims/advanced16Oct17_HGC
 #OUTPATH=/home/gzevi/UpgradeSkims/synchWithBasil8Jul17
 #OUTPATH=.
 mkdir -p ${OUTPATH}
@@ -17,8 +18,8 @@ mkdir -p ${OUTPATH}
 #declare -a Samples=(BB0_ntuple)
 
 ## Central samples
-INEOS=root://eoscms.cern.ch/
-INPATH=/eos/cms/store/group/upgrade/delphes_output/DelphesFromLHE_333pre16_2016Aug/
+#INEOS=root://eoscms.cern.ch/
+#INPATH=/eos/cms/store/group/upgrade/delphes_output/DelphesFromLHE_333pre16_2016Aug/
 
 
 ### New Central samples
@@ -26,10 +27,15 @@ INPATH=/eos/cms/store/group/upgrade/delphes_output/DelphesFromLHE_333pre16_2016A
 #INPATH=/store/user/snowmass/noreplica/DelphesFromLHE_342pre03_2017July/ 
 #xrdfs root://cmseos.fnal.gov/ ls /store/user/snowmass/noreplica/DelphesFromLHE_342pre03_2017July/
 
+## HGC Samples
+INEOS=root://cmseos.fnal.gov/
+INPATH=/store/user/snowmass/noreplica/LHEGEN_SMbackgrounds/Delphes342pre07/
+
 #declare -a Samples=(BB-4p-0-300-v1510_14TEV_200PU BB-4p-1300-2100-v1510_14TEV_200PU BB-4p-2100-100000-v1510_14TEV_200PU BB-4p-300-700-v1510_14TEV_200PU BB-4p-700-1300-v1510_14TEV_200PU LLB-4p-0-400-v1510_14TEV_200PU LLB-4p-400-900-v1510_14TEV_200PU LLB-4p-900-100000-v1510_14TEV_200PU)
 #declare -a Samples=(BB-4p-0-300-v1510_14TEV_200PU BB-4p-1300-2100-v1510_14TEV_200PU BB-4p-2100-100000-v1510_14TEV_200PU BB-4p-300-700-v1510_14TEV_200PU BB-4p-700-1300-v1510_14TEV_200PU BBB-4p-0-600-v1510_14TEV_200PU BBB-4p-600-1300-v1510_14TEV_200PU BBB-4p-1300-100000-v1510_14TEV_200PU ttB-4p-0-900-v1510_14TEV_200PU ttB-4p-1600-2500-v1510_14TEV_200PU ttB-4p-2500-100000-v1510_14TEV_200PU ttB-4p-900-1600-v1510_14TEV_200PU)
 #declare -a Samples=(Bj-4p-0-300-v1510_14TEV_200PU Bj-4p-300-600-v1510_14TEV_200PU Bj-4p-600-1100-v1510_14TEV_200PU Bj-4p-1100-1800-v1510_14TEV_200PU Bj-4p-1800-2700-v1510_14TEV_200PU Bj-4p-2700-3700-v1510_14TEV_200PU Bj-4p-3700-100000-v1510_14TEV_200PU)
-
+declare -a Samples=(TTZJets_TuneCUETP8M2_14TeV_madgraphMLM-pythia8_200PU)
+#declare -a Samples=(TTWJetsToLNu_TuneCUETP8M1_14TeV-amcatnloFXFX-madspin-pythia8_200PU )
 
 
 
@@ -51,8 +57,19 @@ for SAMPLE in ${Samples[@]}
     for FILE in `xrdfs ${INEOS} ls ${INPATH}/${SAMPLE}`
     do
 #	echo $FILE
-	echo root -b -l -q advancedskim.C\(\"$INPATH/${SAMPLE}\",\"$OUTPATH\",\"$FILE\"\)
-    	nohup root -b -l -q advancedskim.C\(\"$INPATH/${SAMPLE}\",\"$OUTPATH\",\"$FILE\"\) >& ${LOGDIR}/log_${FILE}.txt &
+	
+# Works with eos samples at cern, from lxplus
+##	echo root -b -l -q advancedskim.C\(\"$INPATH/${SAMPLE}\",\"$OUTPATH\",\"$FILE\"\)
+##    	nohup root -b -l -q advancedskim.C\(\"$INPATH/${SAMPLE}\",\"$OUTPATH\",\"$FILE\"\) >& ${LOGDIR}/log_${FILE}.txt &
+
+# Works with eos samples at lpc, from lxplus
+	SHORTFILE=`echo $FILE | sed 's/\// /g' | awk '{print $8}'`
+	SHORTFILE_NOROOT=`echo $FILE | sed 's/\// /g' | awk '{print $8}' | sed 's/.root//'`
+	echo root -b -l -q advancedskim.C\(\"$INEOS/${INPATH}/${SAMPLE}\",\"$OUTPATH\",\"$SHORTFILE\"\) ${LOGDIR}/log_${SHORTFILE_NOROOT}.txt
+    	nohup root -b -l -q advancedskim.C\(\"$INEOS/${INPATH}/${SAMPLE}\",\"$OUTPATH\",\"$SHORTFILE\"\) >& ${LOGDIR}/log_${SHORTFILE_NOROOT}.txt &
+
+
+
 #	echo root -b -l -q  skim.C\(\"$INPATH/${SAMPLE}\",\"$OUTPATH\",\"$FILE\"\)
 #    	nohup root -b -l -q skim.C\(\"$INPATH/${SAMPLE}\",\"$OUTPATH\",\"$FILE\"\) >& ${LOGDIR}/log_${FILE}.txt &
     done

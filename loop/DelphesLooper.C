@@ -26,12 +26,15 @@ bool verbose = 0;
 bool synchronizemode = 0; // Example: make, then do: ./runLooper /home/gzevi//UpgradeSkims/advanced3Jul17weights/ BB-4p-0-300 output/weights_2Jul17/ 249977 18693008
 // Settings
 int lumi = 3000; // in fb
-float MuonEnd = 1.6; // 1.6, 2.4 or 2.8
+float MuonEnd = 2.8; // 1.6, 2.4 or 2.8
 
 //Efficiency bins
 const float xbins[6] = {20., 25., 30., 40., 50., 200.};
 const float ybinsEl[6] = {0., 0.8, 1.442, 1.556, 2.0, 2.5};
 const float ybinsMu[6] = {0., 0.9, 1.2, 2.1, 2.4, 2.8};
+
+const int n_mtminbins = 7;
+const float mtminbins[n_mtminbins+1] = {0, 90, 120, 150, 200, 250, 300, 400}; 
 
 
 void DelphesLooper::progress( int nEventsTotal, int nEventsChain ){
@@ -732,9 +735,10 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
 
       
 
+      if (MET_ > 250)  fillHistos(h_1d_met250, "met250", ""); // High MET // NOT A CUT //
 
-      if (mtmin_ < 120) continue; // CUT //
-      fillHistos(h_1d_mt120, "mt120", ""); // High MTmin
+
+      if (mtmin_ > 120) fillHistos(h_1d_mt120, "mt120", ""); // High MTmin // NOT A CUT //
 
       cout<<"Event passed full selection, type "<<BBtype_<<", MET "<<MET_;
       cout<<". Leptons are "<<leptons_[0].id<<","<<leptons_[0].vec.Pt()<<" and "<<leptons_[1].id<<","<<leptons_[1].vec.Pt()<<endl;
@@ -776,6 +780,7 @@ void DelphesLooper::loop(TChain* chain, std::string sample, std::string output_d
   savePlotsDir(h_1d_j2Veto, outfile_, "j2Veto");
   savePlotsDir(h_1d_Zveto, outfile_, "Zveto");
   savePlotsDir(h_1d_mt120, outfile_, "mt120");
+  savePlotsDir(h_1d_met250, outfile_, "met250");
   outfile_->Write();
   outfile_->Close();
   delete outfile_;
@@ -863,6 +868,10 @@ void DelphesLooper::fillHistos(std::map<std::string, TH1*>& h_1d, const std::str
   plot1D("h_mtmin"+s, mtmin_,  evtweight_, h_1d, "MTmin", 150, 0, 300);
   plot1D("h_mtmin"+stype+s, mtmin_,  evtweight_, h_1d, "MTmin", 150, 0, 300);
   plot1D("h_mtmin"+s+BBstring_, mtmin_,  evtweight_, h_1d, "MTmin", 150, 0, 300);
+
+  plot1D("h_mtminbins"+s, mtmin_,  evtweight_, h_1d, "MTmin", n_mtminbins, mtminbins); 
+  plot1D("h_mtminbins"+stype+s, mtmin_,  evtweight_, h_1d, "MTmin", n_mtminbins, mtminbins);
+  plot1D("h_mtminbins"+s+BBstring_, mtmin_,  evtweight_, h_1d, "MTmin", n_mtminbins, mtminbins);
 
 
 //  // MET Resolution study
