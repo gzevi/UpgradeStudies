@@ -51,7 +51,8 @@ CMS_lumi( TPad* pad, int iPeriod, int iPosX )
   else if ( iPeriod==4 )
     {
       lumiText += lumi_13TeV;
-      lumiText += " (14 TeV)";
+//      lumiText += " (14 TeV)";
+      lumiText += ", 14 TeV, 200 PU";
     }
   else if ( iPeriod==7 )
     { 
@@ -91,6 +92,7 @@ CMS_lumi( TPad* pad, int iPeriod, int iPosX )
       latex.SetTextAlign(11); 
       latex.SetTextSize(cmsTextSize*t);    
       latex.DrawLatex(l,1-t+lumiTextOffset*t,cmsText);
+      cout<<__LINE__<<endl;
     }
   
   pad->cd();
@@ -133,12 +135,15 @@ CMS_lumi( TPad* pad, int iPeriod, int iPosX )
 	  latex.SetTextSize(cmsTextSize*t);
 	  latex.SetTextAlign(align_);
 	  latex.DrawLatex(posX_, posY_, cmsText);
+    cout<<__LINE__<<endl;
 	  if( writeExtraText ) 
 	    {
 	      latex.SetTextFont(extraTextFont);
 	      latex.SetTextAlign(align_);
 	      latex.SetTextSize(extraTextSize*t);
 	      latex.DrawLatex(posX_, posY_- relExtraDY*cmsTextSize*t, extraText);
+        cout<<__LINE__<<endl;
+
 	    }
 	}
     }
@@ -148,11 +153,16 @@ CMS_lumi( TPad* pad, int iPeriod, int iPosX )
 	{
 	  posX_ =   l +  relPosX*(1-l-r);
 	  posY_ =   1-t+lumiTextOffset*t;
+    cout<<__LINE__<<endl;
 	}
       latex.SetTextFont(extraTextFont);
       latex.SetTextSize(extraTextSize*t);
       latex.SetTextAlign(align_);
-      latex.DrawLatex(posX_, posY_, extraText);      
+      latex.DrawLatex(l+0.1, 1-t+lumiTextOffset*t+0.025, extraText);      
+      cout<<__LINE__<<endl;
+      //      latex.DrawLatex(l,1-t+lumiTextOffset*t,cmsText);
+
+
     }
   return;
 }

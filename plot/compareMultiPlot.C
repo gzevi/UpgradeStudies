@@ -29,7 +29,10 @@ TCanvas *canv;
 TString outname = "prova.root";
 
 //int favColors[5] = { kBlack, kOrange-2, kAzure-2, kViolet-2, kSpring-2};
-int favColors[5] = { kOrange-2, kAzure-2, kViolet-2, kSpring-2};
+int favColors[10] = { kOrange-2, kBlue+2, kViolet-2, kAzure-2, kRed-7, kSpring-1, kMagenta-9, kCyan+2, kOrange+1, kGreen+2 };
+
+//int favColors[10] = { kSpring-5, kAzure+7, kCyan-7, kRed-7, kOrange-4, kMagenta-7, kTeal-5, kGray, kGray, kGray };
+//int favColors[10] = { kAzure+8, kAzure-2, kSpring-5, kSpring-6, kRed-7, kRed, kMagenta, kViolet+3, kOrange-3, kOrange+7};
 
 //--------Turn on/off different plots-----------
 
@@ -906,11 +909,11 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
   
   cout << "-- plotting hist: " << nplots[0] << " etc "<<endl;
   
-  cmsText = "CMS Simulation Preliminary";
-  writeExtraText = false;
+  cmsText = "CMS";
+  writeExtraText = true;
   //lumi_13TeV = "42 pb^{-1}";
   //lumi_13TeV = "20.38 pb^{-1}";
-  lumi_13TeV = "300 fb^{-1}";
+  lumi_13TeV = "3 ab^{-1}";
   
   gStyle->SetOptStat("");
   gStyle->SetCanvasColor(0);
@@ -919,6 +922,7 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
   gStyle->SetPadTickX(1);
   gStyle->SetPadTickY(1);
   gStyle->SetFrameBorderMode(0);
+  gStyle->SetPalette(51);
   
   // if ratio was requested, check if data is present.  If not, turn ratio off again
   //  const unsigned int n = samples.size();
@@ -977,7 +981,7 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
   //TLegend* leg = new TLegend(0.55,0.6,0.85,0.92);
   //TLegend* leg = new TLegend(0.55,0.7,0.85,0.90);
   //  TLegend* leg = new TLegend(0.25,0.7,0.85,0.90);
-  TLegend* leg = new TLegend(0.65,0.75,0.85,0.90);
+  TLegend* leg = new TLegend(0.65,0.45,0.85,0.90);
   leg->SetFillColor(0);
   leg->SetBorderSize(0);
   leg->SetTextSize(0.032);
@@ -1018,6 +1022,17 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
 	data_hist->SetBinError( ibin, sqrt(data_hist->GetBinContent(ibin)) );
       }
     } // if fakedata
+    
+    // OverFlow
+    double lastbin = data_hist->GetBinContent(data_hist->GetNbinsX());
+    double lastbinErr = data_hist->GetBinError(data_hist->GetNbinsX());
+    double overflow = data_hist->GetBinContent(data_hist->GetNbinsX()+1);
+    double overflowErr = data_hist->GetBinError(data_hist->GetNbinsX()+1);
+    data_hist->SetBinContent(data_hist->GetNbinsX(), lastbin + overflow);
+    data_hist->SetBinContent(data_hist->GetNbinsX()+1, 0);
+    data_hist->SetBinError(data_hist->GetNbinsX(), sqrt(lastbinErr*lastbinErr + overflowErr*overflowErr));
+    data_hist->SetBinError(data_hist->GetNbinsX()+1, 0);
+
     // expect to only find 1 data hist
     break;
   }
@@ -1054,12 +1069,12 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
     TH1D* h = (TH1D*) h_temp->Clone("h1");
     h->SetDirectory(0);
     
-    h->SetFillColor(i+1);
-    h->SetLineColor(i+1);
-    if (i>=2) h->SetFillColor(2+i);
-    if (i>=3) h->SetFillColor(3+i);
-    if (i>=2) h->SetLineColor(2+i);
-    if (i>=3) h->SetLineColor(3+i);
+//    h->SetFillColor(i+1);
+//    h->SetLineColor(i+1);
+//    if (i>=2) h->SetFillColor(2+i);
+//    if (i>=3) h->SetFillColor(3+i);
+//    if (i>=2) h->SetLineColor(2+i);
+//    if (i>=3) h->SetLineColor(3+i);
     if (rebin > 1) h->Rebin(rebin);
     
     
@@ -1070,7 +1085,18 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
     h->SetFillColor(favColors[i]);
     h->SetLineColor(favColors[i]);
     
-      
+    
+    
+    // OverFlow
+    double lastbin = h->GetBinContent(h->GetNbinsX());
+    double lastbinErr = h->GetBinError(h->GetNbinsX());
+    double overflow = h->GetBinContent(h->GetNbinsX()+1);
+    double overflowErr = h->GetBinError(h->GetNbinsX()+1);
+    h->SetBinContent(h->GetNbinsX(), lastbin + overflow);
+    h->SetBinContent(h->GetNbinsX()+1, 0);
+    h->SetBinError(h->GetNbinsX(), sqrt(lastbinErr*lastbinErr + overflowErr*overflowErr));
+    h->SetBinError(h->GetNbinsX()+1, 0);
+          
     //t->Add(h);
     if( h_bgtot==0 ) {
       
@@ -1083,11 +1109,14 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
     bkgintegral += h->Integral();
     bg_hists.push_back(h);
     bg_names.push_back(labels[i]);
+
+    leg->AddEntry(h,labels[i],"f");
+
   }
   
   // loop backwards to normalize and add to legend
   for (int ibg = (int) bg_hists.size()-1; ibg >= 0; --ibg) {
-    leg->AddEntry(bg_hists.at(ibg),bg_names.at(ibg),"f");
+    //leg->AddEntry(bg_hists.at(ibg),bg_names.at(ibg),"f");
     if (norm && bkgintegral > 0) {
       bg_hists.at(ibg)->Scale( dataintegral / bkgintegral);
       //h_bgtot->Scale( dataintegral / bkgintegral);
@@ -1125,8 +1154,18 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
     h->SetDirectory(0);
     //    h->Sumw2();
     h->SetLineColor(sig_hists.size()+1);
-    h->SetLineWidth(2 );
+    h->SetLineWidth(3 );
 
+    // OverFlow
+    double lastbin = h->GetBinContent(h->GetNbinsX());
+    double lastbinErr = h->GetBinError(h->GetNbinsX());
+    double overflow = h->GetBinContent(h->GetNbinsX()+1);
+    double overflowErr = h->GetBinError(h->GetNbinsX()+1);
+    h->SetBinContent(h->GetNbinsX(), lastbin + overflow);
+    h->SetBinContent(h->GetNbinsX()+1, 0);
+    h->SetBinError(h->GetNbinsX(), sqrt(lastbinErr*lastbinErr + overflowErr*overflowErr));
+    h->SetBinError(h->GetNbinsX()+1, 0);
+    
     //h->SetLineColor(favColors[i]);
     cout << "sig " << i << " integral:" << h->Integral() << endl;
     if (i==0) srIntegral = h->Integral();
@@ -1156,6 +1195,11 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
   float ymax = 0;
   if(h_bgtot!=0) ymax = h_bgtot->GetMaximum();
   
+  if ( !saveas.Contains("fbrem") && xmin==0 && sig_hists.size()>0) xmin = sig_hists.at(0)->GetXaxis()->GetXmin();
+  if ( xmax==0 && sig_hists.size()>0) xmax = sig_hists.at(0)->GetXaxis()->GetXmax();
+  if ( !saveas.Contains("fbrem") && xmin==0 && data_hist) xmin = data_hist->GetXaxis()->GetXmin();
+  if ( xmax==0 && data_hist) xmax = data_hist->GetXaxis()->GetXmax();
+  
   // also check signals for max val
   for (unsigned int isig = 0; isig < sig_hists.size(); ++isig) {
     sig_hists.at(isig)->GetXaxis()->SetRangeUser(xmin, xmax);
@@ -1166,25 +1210,20 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
   if (data_hist) { if (data_hist->GetMaximum() > ymax) ymax = data_hist->GetMaximum(); }
       
   float ymin = 0;
-  if( logplot ) {ymax*=20; ymin = 0.1;}
-  else    ymax*=1.5;
+  if( logplot ) {ymax*=20; ymin = 1;}
+  else    ymax*=1.7;
   
   if (logplot && norm) ymin = 0.1;
   
-  
-  if ( !saveas.Contains("fbrem") && xmin==0 && sig_hists.size()>0) xmin = sig_hists.at(0)->GetXaxis()->GetXmin();
-  if ( xmax==0 && sig_hists.size()>0) xmax = sig_hists.at(0)->GetXaxis()->GetXmax();
-  if ( !saveas.Contains("fbrem") && xmin==0 && data_hist) xmin = data_hist->GetXaxis()->GetXmin();
-  if ( xmax==0 && data_hist) xmax = data_hist->GetXaxis()->GetXmax();
-  
-  
+    
   TH2F* h_axes = new TH2F(nplots[0],"",1000,xmin,xmax,1000,ymin,ymax);
   h_axes->GetXaxis()->SetTitle(xtitle.c_str());
   h_axes->GetXaxis()->SetLabelSize(0.04);
   h_axes->GetXaxis()->SetTitleSize(0.05);
   h_axes->GetYaxis()->SetTitle(ytitle.c_str());
   h_axes->GetYaxis()->SetLabelSize(0.04);
-  h_axes->GetYaxis()->SetTitleOffset(1.09);
+//  h_axes->GetYaxis()->SetTitleOffset(1.09);
+  h_axes->GetYaxis()->SetTitleOffset(1.59);
   h_axes->GetYaxis()->SetTitleSize(0.05);
   if (doRatio) {
     h_axes->GetXaxis()->SetLabelSize(0.);
@@ -1256,6 +1295,7 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
   else {
     lumiTextSize     = 0.45;
     cmsTextSize      = 0.55;
+    relExtraDY = 0.2;
     CMS_lumi( can, iPeriod, iPos );
   }
 
@@ -1270,14 +1310,22 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
     ratiopad->SetTopMargin(0.08);
     ratiopad->SetBottomMargin(0.44);
     ratiopad->SetGridy();
+    ratiopad->SetLogy(1);
     ratiopad->Draw();
     ratiopad->cd();
 
     
-    TH1D* h_ratio = (TH1D*) data_hist->Clone(Form("ratio_%s",data_hist->GetName()));
+//    TH1D* h_ratio = (TH1D*) data_hist->Clone(Form("ratio_%s",data_hist->GetName()));
+    TH1D* h_ratio = (TH1D*) sig_hists[0]->Clone(Form("ratio_%s",sig_hists[0]->GetName()));
     h_ratio->Sumw2();
     h_bgtot->Sumw2();
+//    h_ratio->Multiply(h_ratio); // S^2/B
     h_ratio->Divide(h_bgtot);
+//    for (int ibin=0; ibin < h_ratio->GetNbinsX(); ++ibin) {
+//      float err = h_ratio->GetBinError(ibin) / h_ratio->GetBinContent(ibin);
+//      h_ratio->SetBinContent(ibin, sqrt(h_ratio->GetBinContent(ibin)));
+//      h_ratio->SetBinError(ibin, err * h_ratio->GetBinContent(ibin));
+//    }
 
     //get max/min for ratio
     float ratio_min = h_ratio->GetMinimum();
@@ -1291,15 +1339,15 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
     
     // draw axis only
     TH1F* h_axis_ratio = new TH1F(Form("%s_axes",h_ratio->GetName()),"",100,xmin,xmax);
-    h_axis_ratio->GetYaxis()->SetTitleOffset(0.3);
+    h_axis_ratio->GetYaxis()->SetTitleOffset(0.4);
     h_axis_ratio->GetYaxis()->SetTitleSize(0.18);
     h_axis_ratio->GetYaxis()->SetNdivisions(5);
     h_axis_ratio->GetYaxis()->SetLabelSize(0.15);
-    h_axis_ratio->GetYaxis()->SetRangeUser(0.5,1.5);
+    h_axis_ratio->GetYaxis()->SetRangeUser(0.001,10);
 //    h_axis_ratio->GetYaxis()->SetRangeUser(0.5,2.5);
     //h_axis_ratio->GetYaxis()->SetRangeUser(ratio_min*0.9,ratio_max*1.1);
     //h_axis_ratio->GetYaxis()->SetRangeUser(0.001,2.0);
-    h_axis_ratio->GetYaxis()->SetTitle("Data/MC");
+    h_axis_ratio->GetYaxis()->SetTitle("S/B");
     h_axis_ratio->GetXaxis()->SetTitle(h_axes->GetXaxis()->GetTitle());
     h_axis_ratio->GetXaxis()->SetTitleSize(0.17);
     h_axis_ratio->GetXaxis()->SetLabelSize(0.17);
@@ -1328,87 +1376,1112 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
   return;
 }
 
+
+
+void makeCMSPlotSignalBackgroundPhase2TDR(  vector<TString> files,  vector<TString> labels, vector<TString> nplots , vector<TString> purpose , TString saveas, const string& xtitle , const string& ytitle , float xmin , float xmax , int rebin = 1 , bool logplot = false, bool norm = false, bool doRatio = false ) {
+  
+  cout << "-- plotting hist: " << nplots[0] << " etc "<<endl;
+  
+  cmsText = "CMS";
+  writeExtraText = true;
+  //lumi_13TeV = "42 pb^{-1}";
+  //lumi_13TeV = "20.38 pb^{-1}";
+  lumi_13TeV = "3 ab^{-1}";
+  
+  gStyle->SetOptStat("");
+  gStyle->SetCanvasColor(0);
+  gStyle->SetPadGridX(0);
+  gStyle->SetPadGridY(0);
+  gStyle->SetPadTickX(1);
+  gStyle->SetPadTickY(1);
+  gStyle->SetFrameBorderMode(0);
+  gStyle->SetPalette(51);
+  
+  // if ratio was requested, check if data is present.  If not, turn ratio off again
+  //  const unsigned int n = samples.size();
+  //  if (doRatio) {
+  //    bool foundData = false;
+  //    for( unsigned int i = 0 ; i < n ; ++i ) {
+  //      if( TString(names.at(i)).Contains("data")  ) {
+  //        foundData = true;
+  //        break;
+  //      }
+  //    }
+  //    if (!foundData) {
+  //      cout << "ratio requested but no data hist found.  Not plotting ratio" << endl;
+  //      doRatio = false;
+  //    }
+  //  } // if doRatio
+  
+  if (!doRatio) {
+    //these 4 lines shift plot to make room for axis labels
+    gStyle->SetPadTopMargin(0.075);
+    gStyle->SetPadBottomMargin(0.125);
+    gStyle->SetPadLeftMargin(0.15);
+    gStyle->SetPadRightMargin(0.05);
+  }
+  
+  TString canvas_name = saveas;
+  TCanvas* can = new TCanvas(canvas_name,canvas_name, 800, 600);
+  can->cd();
+  if (!doRatio) {
+    if (logplot) can->SetLogy();
+    gPad->SetRightMargin(0.05);
+    gPad->Modified();
+  }
+  
+  // splitting canvas for ratio plots
+  TPad* fullpad(0);
+  TPad* plotpad(0);
+  
+  if (doRatio) {
+    // master pad
+    fullpad = new TPad("fullpad","fullpad",0,0,1,1);
+    fullpad->Draw();
+    fullpad->cd();
+    
+    // main plot pad, for ratio on bottom
+    // plotpad = new TPad("plotpad","plotpad",0,0.2,1,0.99);
+    plotpad = new TPad("plotpad","plotpad",0,0.2,1,0.99);
+    plotpad->SetTopMargin(0.05);
+    plotpad->SetRightMargin(0.05);
+    plotpad->SetBottomMargin(0.05);
+    plotpad->Draw();
+    plotpad->cd();
+    if( logplot ) plotpad->SetLogy();
+  }
+  
+  //TLegend* leg = new TLegend(0.55,0.6,0.85,0.92);
+  //TLegend* leg = new TLegend(0.55,0.7,0.85,0.90);
+  //  TLegend* leg = new TLegend(0.25,0.7,0.85,0.90);
+  TLegend* leg = new TLegend(0.5,0.65,0.85,0.90);
+//  TLegend *leg = new TLegend(-2.353437e-185,-2.353437e-185,-2.353437e-185,-2.353437e-185,NULL,"brNDC");
+  leg->SetFillColor(0);
+  leg->SetBorderSize(0);
+//  leg->SetTextSize(0.032);
+  leg->SetTextSize(0.05915);
+  if (doRatio) leg->SetTextSize(0.05);
+  
+  TH1D* data_hist(0);
+  TString data_name;
+  float dataintegral = 0;
+  for( unsigned int i = 0 ; i < files.size() ; ++i ){
+    if( !TString(purpose.at(i)).Contains("data")  && !TString(purpose.at(i)).Contains("Data")) continue;
+    
+    TFile f1( files[i], "READ");
+    if(!f1.IsOpen()){
+      std::cout<<"File "<<files[i]<<" can't be found, will not be used for histogram "<<nplots[i]<<std::endl;
+      continue;
+    }
+    if(f1.Get(nplots[i].Data())==0){
+      std::cout<<"Histogram "<<nplots[i]<<" not found in file "<<files[i]<<std::endl;
+      continue;
+    }
+    
+    TH1D* h_temp = (TH1D*) f1.Get(nplots[i]);
+    if (h_temp == 0) continue;
+    // don't draw signal if the total yield in the plot is < 0.1 events
+    //if (h_temp->Integral(0,-1) < 0.1) continue;
+    data_hist = (TH1D*) h_temp->Clone("h1");
+    data_hist->SetDirectory(0);
+    //    data_hist->Sumw2();
+    dataintegral = data_hist->Integral();
+    data_name = labels[i];
+    data_hist->SetLineColor(kBlack);
+    data_hist->SetMarkerColor(kBlack);
+    data_hist->SetMarkerStyle(20);
+    if (rebin > 1) data_hist->Rebin(rebin);
+    // fake data -> set error bars to correspond to data stats
+    if (TString(data_name).Contains("fakedata")) {
+      for (int ibin = 0; ibin <= data_hist->GetNbinsX(); ++ibin) {
+        data_hist->SetBinError( ibin, sqrt(data_hist->GetBinContent(ibin)) );
+      }
+    } // if fakedata
+    // expect to only find 1 data hist
+    break;
+  }
+  
+  if (data_hist) leg->AddEntry(data_hist,data_name,"pe");
+  
+  THStack* t = new THStack("stack","stack");
+  TH1D* h_bgtot = 0;
+  //
+  //  // to make legend and find max yvalue
+  vector<TH1D*> bg_hists;
+  vector<TString> bg_names;
+  vector<TH1D*> sig_hists;
+  vector<TString> sig_names;
+  float bkgintegral = 0;
+  // background hists
+  for( unsigned int i = 0 ; i < files.size() ; ++i ){
+    if( !TString(purpose.at(i)).Contains("bkg")  ) continue;
+    
+    TFile f1( files[i], "READ");
+    if(!f1.IsOpen()){
+      std::cout<<"File "<<files[i]<<" can't be found, will not be used for histogram "<<nplots[i]<<std::endl;
+      continue;
+    }
+    if(f1.Get(nplots[i].Data())==0){
+      std::cout<<"Histogram "<<nplots[i]<<" not found in file "<<files[i]<<std::endl;
+      continue;
+    }
+    
+    TH1D* h_temp = (TH1D*) f1.Get(nplots[i]);
+    if (h_temp == 0) continue;
+    // don't draw signal if the total yield in the plot is < 0.1 events
+    //if (h_temp->Integral(0,-1) < 0.1) continue;
+    TH1D* h = (TH1D*) h_temp->Clone("h1");
+    h->SetDirectory(0);
+    
+    //    h->SetFillColor(i+1);
+    //    h->SetLineColor(i+1);
+    //    if (i>=2) h->SetFillColor(2+i);
+    //    if (i>=3) h->SetFillColor(3+i);
+    //    if (i>=2) h->SetLineColor(2+i);
+    //    if (i>=3) h->SetLineColor(3+i);
+    if (rebin > 1) h->Rebin(rebin);
+    
+    
+    //hack to fix colors for one bkg
+    // h->SetFillColor(kOrange-2);
+    // h->SetLineColor(kOrange-2);
+    
+    h->SetFillColor(favColors[i]);
+    h->SetLineColor(favColors[i]);
+    
+    
+    //t->Add(h);
+    if( h_bgtot==0 ) {
+      
+      h_bgtot = (TH1D*) h->Clone("bkgtot");
+      h_bgtot->SetDirectory(0);
+      
+    }
+    else {h_bgtot->Add(h); }
+    
+    bkgintegral += h->Integral();
+    bg_hists.push_back(h);
+    bg_names.push_back(labels[i]);
+    
+    leg->AddEntry(h,labels[i],"f");
+    
+  }
+  
+  // loop backwards to normalize and add to legend
+  for (int ibg = (int) bg_hists.size()-1; ibg >= 0; --ibg) {
+    //leg->AddEntry(bg_hists.at(ibg),bg_names.at(ibg),"f");
+    if (norm && bkgintegral > 0) {
+      bg_hists.at(ibg)->Scale( dataintegral / bkgintegral);
+      //h_bgtot->Scale( dataintegral / bkgintegral);
+    }
+    t->Add(bg_hists.at(ibg));
+  }
+  if (norm && bkgintegral > 0) { h_bgtot->Scale( dataintegral / bkgintegral);}
+  cout << "Data/MC: " << dataintegral / bkgintegral << endl;  
+  //for wjets SR/CR ratio
+  if (doSoftLep) {  cout << "Data/MC: " << dataintegral / bkgintegral << endl; }
+  float srIntegral = -1;
+  float crIntegral = -1;
+  
+  
+  // signal hists - all samples must have "sig" in the name
+  
+  for( unsigned int i = 0 ; i < files.size() ; ++i ){
+    if( !TString(purpose.at(i)).Contains("sig")  ) continue;
+    
+    TFile f1( files[i], "READ");
+    if(!f1.IsOpen()){
+      std::cout<<"File "<<files[i]<<" can't be found, will not be used for histogram "<<nplots[i]<<std::endl;
+      continue;
+    }
+    if(f1.Get(nplots[i].Data())==0){
+      std::cout<<"Histogram "<<nplots[i]<<" not found in file "<<files[i]<<std::endl;
+      continue;
+    }
+    
+    TH1D* h_temp = (TH1D*) f1.Get(nplots[i]);
+    if (h_temp == 0) continue;
+    // don't draw signal if the total yield in the plot is < 0.1 events
+    //if (h_temp->Integral(0,-1) < 0.1) continue;
+    TH1D* h = (TH1D*) h_temp->Clone("h1");
+    h->SetDirectory(0);
+    //    h->Sumw2();
+    h->SetLineColor(sig_hists.size()+1);
+    h->SetLineWidth(3 );
+    
+    //h->SetLineColor(favColors[i]);
+    cout << "sig " << i << " integral:" << h->Integral() << endl;
+    if (i==0) srIntegral = h->Integral();
+    if (i==1) crIntegral = h->Integral();
+    
+    if (rebin > 1) h->Rebin(rebin);
+    if (norm ) {
+      if (dataintegral != 0) h->Scale(  dataintegral / h->Integral()  );
+      else h->Scale(  1 / h->Integral()  );
+    }
+    sig_hists.push_back(h);
+    sig_names.push_back(labels[i]);
+  }
+  
+  if (doSoftLep) {
+    float crOverSr = crIntegral/srIntegral;
+    cout << "CR/SR: " << crOverSr << endl;
+    stringstream ss (stringstream::in | stringstream::out);
+    ss << std::setprecision(2) << crOverSr;
+    lumi_13TeV = "CR/SR = "+ss.str();
+  }
+  
+  if (doDoubleElTrig) {
+    lumi_13TeV = "2.1 fb^{-1}";
+  }
+  
+  float ymax = 0;
+  if(h_bgtot!=0) ymax = h_bgtot->GetMaximum();
+  
+  if ( !saveas.Contains("fbrem") && xmin==0 && sig_hists.size()>0) xmin = sig_hists.at(0)->GetXaxis()->GetXmin();
+  if ( xmax==0 && sig_hists.size()>0) xmax = sig_hists.at(0)->GetXaxis()->GetXmax();
+  if ( !saveas.Contains("fbrem") && xmin==0 && data_hist) xmin = data_hist->GetXaxis()->GetXmin();
+  if ( xmax==0 && data_hist) xmax = data_hist->GetXaxis()->GetXmax();
+  
+  // also check signals for max val
+  for (unsigned int isig = 0; isig < sig_hists.size(); ++isig) {
+    sig_hists.at(isig)->GetXaxis()->SetRangeUser(xmin, xmax);
+    if (sig_hists.at(isig)->GetMaximum() > ymax) ymax = sig_hists.at(isig)->GetMaximum();
+  }
+  
+  //also check data for max y val
+  if (data_hist) { if (data_hist->GetMaximum() > ymax) ymax = data_hist->GetMaximum(); }
+  
+  float ymin = 0;
+  if( logplot ) {ymax*=20; ymin = 0.1;}
+  else    ymax*=1.7;
+  
+  if (logplot && norm) ymin = 0.1;
+  
+  
+  TH2F* h_axes = new TH2F(nplots[0],"",1000,xmin,xmax,1000,ymin,ymax);
+  h_axes->GetXaxis()->SetTitle(xtitle.c_str());
+  h_axes->GetYaxis()->SetTitle(ytitle.c_str());
+//  h_axes->GetXaxis()->SetLabelSize(0.04);
+//  h_axes->GetXaxis()->SetTitleSize(0.05);
+//  h_axes->GetYaxis()->SetLabelSize(0.04);
+//  //  h_axes->GetYaxis()->SetTitleOffset(1.09);
+//  h_axes->GetYaxis()->SetTitleOffset(1.59);
+//  h_axes->GetYaxis()->SetTitleSize(0.05);
+  
+  h_axes->GetXaxis()->SetLabelFont(42);
+  h_axes->GetXaxis()->SetLabelOffset(0.0142805);
+  h_axes->GetXaxis()->SetLabelSize(0.05915);
+  h_axes->GetXaxis()->SetTitleSize(0.05915);
+  h_axes->GetXaxis()->SetTitleFont(42);
+  h_axes->GetYaxis()->SetLabelFont(42);
+  h_axes->GetYaxis()->SetLabelSize(0.05915);
+  h_axes->GetYaxis()->SetTitleSize(0.05915);
+  h_axes->GetYaxis()->SetTitleOffset(1.4);
+  h_axes->GetYaxis()->SetTitleFont(42);
+  
+  
+  if (doRatio) {
+    h_axes->GetXaxis()->SetLabelSize(0.);
+    h_axes->GetXaxis()->SetTitleSize(0.);
+  }
+  h_axes->Draw();
+  
+  t->Draw("hist same");
+  
+  // add signal hists
+  for (unsigned int isig = 0; isig < sig_hists.size(); ++isig) {
+    //sig_hists.at(isig)->Draw("hist same");
+    sig_hists.at(isig)->Draw("histsame e");
+    leg->AddEntry(sig_hists.at(isig),sig_names.at(isig),"lp");
+  }
+  
+  if (data_hist) data_hist->Draw("pe same");
+  
+  TLatex label;
+  label.SetNDC();
+  label.SetTextSize(0.032);
+  float label_y_start = 0.82;
+  float label_y_spacing = 0.04;
+  if (doRatio) {
+    label.SetTextSize(0.039);
+    label_y_start = 0.84;
+    label_y_spacing = 0.04;
+  }
+  
+  //  //TString ht_label = getHTPlotLabel(histdir);
+  //  TString ht_label = getHTPlotLabel(samples.at(0), histdir);
+  //  TString region_label = getJetBJetPlotLabel(samples.at(0), histdir);
+  //  TString region_label_line2 = getMT2PlotLabel(samples.at(0), histdir);
+  //  //label.DrawLatex(0.2,0.85,ht_label);
+  //  label.DrawLatex(0.187,label_y_start,ht_label);
+  //  // base region plots all have at least 2 jets
+  //  if ((histdir.find("base") != std::string::npos)) region_label = "#geq 2j";
+  //  // minMT plot always requires at least 2 bjets
+  //  if ((histdir.find("srbase") != std::string::npos) && (histname.find("minMTBMet") != std::string::npos)) region_label = "#geq 2j, #geq 2b";
+  //  // lostlepton CR
+  //  if ((histdir.find("crsl") != std::string::npos)) region_label += ", 1 lepton";
+  //
+  //  if (region_label.Length() > 0) label.DrawLatex(0.187,label_y_start - label_y_spacing,region_label);
+  //  if (region_label_line2.Length() > 0) label.DrawLatex(0.187,label_y_start - 2 * label_y_spacing,region_label_line2);
+  
+  leg->Draw();
+  
+//  TLegend *leg2 = new TLegend(-2.353437e-185,-2.353437e-185,-2.353437e-185,-2.353437e-185,NULL,"brNDC");
+//  leg2->SetBorderSize(0);
+//  leg2->SetLineColor(1);
+//  leg2->SetLineStyle(1);
+//  leg2->SetLineWidth(1);
+//  leg2->SetFillColor(0);
+//  leg2->SetFillStyle(0);
+//  cout<<__LINE__<<endl;
+//  TLegendEntry *entry=leg2->AddEntry(sig_hists.at(0),"200 PU","lp");
+//  entry->SetLineColor(1);
+//  entry->SetLineStyle(1);
+//  entry->SetLineWidth(1);
+//  entry->SetMarkerColor(1);
+//  entry->SetMarkerStyle(21);
+//  entry->SetMarkerSize(1);
+//  cout<<__LINE__<<endl;
+//  cout<<__LINE__<<endl;
+//  leg2->Draw();
+
+  
+  
+  h_axes->Draw("axissame");
+  
+  
+  // -- for CMS_lumi label
+  
+  const int iPeriod = 4; // 13 tev
+  
+  // iPos drives the position of the CMS logo in the plot
+  // iPos=11 : top-left, left-aligned
+  // iPos=33 : top-right, right-aligned
+  // iPos=22 : center, centered
+  // mode generally :
+  //   iPos = 10*(alignement 1/2/3) + position (1/2/3 = left/center/right)
+  //const int iPos = 11;
+  const int iPos = 3;
+  
+  
+  if (doRatio) {
+    lumiTextSize     = 0.8;
+    cmsTextSize      = 1.0;
+    CMS_lumi( plotpad, iPeriod, iPos );
+  }
+  else {
+    lumiTextSize     = 0.45;
+    cmsTextSize      = 0.55;
+    relExtraDY = 0.2;
+//    CMS_lumi( can, iPeriod, iPos );
+    
+    
+    TLatex *   tex = new TLatex(0.18,0.94,"CMS");
+    tex->SetNDC();
+    tex->SetTextSize(0.0625);
+    tex->SetLineWidth(2);
+    tex->Draw();
+    tex = new TLatex(0.285,0.94,"Phase-2 Simulation");
+    tex->SetNDC();
+    tex->SetTextFont(52);
+    tex->SetLineWidth(2);
+    tex->Draw();
+    tex = new TLatex(0.95,0.94,"14 TeV, 200 PU");
+    tex->SetNDC();
+    tex->SetTextAlign(31);
+    tex->SetTextFont(42);
+    tex->SetTextSize(0.06);
+    tex->SetLineWidth(2);
+    tex->Draw();
+
+    
+  }
+  
+  // make ratio pad and plot
+  if (doRatio) {
+    // draw ratio pad
+    fullpad->cd();
+    TPad* ratiopad = new TPad("ratiopad","ratiopad",0.,0.,1,0.23);
+    //ratiopad->SetLeftMargin(0.16);
+    //ratiopad->SetLeftMargin(0.0);
+    ratiopad->SetRightMargin(0.05);
+    ratiopad->SetTopMargin(0.08);
+    ratiopad->SetBottomMargin(0.44);
+    ratiopad->SetGridy();
+    ratiopad->Draw();
+    ratiopad->cd();
+    
+    
+    //    TH1D* h_ratio = (TH1D*) data_hist->Clone(Form("ratio_%s",data_hist->GetName()));
+    TH1D* h_ratio = (TH1D*) sig_hists[0]->Clone(Form("ratio_%s",sig_hists[0]->GetName()));
+    h_ratio->Sumw2();
+    h_bgtot->Sumw2();
+    h_ratio->Multiply(h_ratio); // S^2/B
+    h_ratio->Divide(h_bgtot);
+    
+    //get max/min for ratio
+    float ratio_min = h_ratio->GetMinimum();
+    float ratio_max = h_ratio->GetMaximum();
+    
+    //recompute min/max by calculating average of ratio histogram
+    float ratio_average = h_ratio->Integral();
+    ratio_average = ratio_average / (xmax-xmin);
+    ratio_min = ratio_average * 0.5;
+    ratio_max = ratio_average * 1.5;
+    
+    // draw axis only
+    TH1F* h_axis_ratio = new TH1F(Form("%s_axes",h_ratio->GetName()),"",100,xmin,xmax);
+    h_axis_ratio->GetYaxis()->SetTitleOffset(0.3);
+    h_axis_ratio->GetYaxis()->SetTitleSize(0.18);
+    h_axis_ratio->GetYaxis()->SetNdivisions(5);
+    h_axis_ratio->GetYaxis()->SetLabelSize(0.15);
+    h_axis_ratio->GetYaxis()->SetRangeUser(0,10);
+    //    h_axis_ratio->GetYaxis()->SetRangeUser(0.5,2.5);
+    //h_axis_ratio->GetYaxis()->SetRangeUser(ratio_min*0.9,ratio_max*1.1);
+    //h_axis_ratio->GetYaxis()->SetRangeUser(0.001,2.0);
+    h_axis_ratio->GetYaxis()->SetTitle("S/sqrt(B)");
+    h_axis_ratio->GetXaxis()->SetTitle(h_axes->GetXaxis()->GetTitle());
+    h_axis_ratio->GetXaxis()->SetTitleSize(0.17);
+    h_axis_ratio->GetXaxis()->SetLabelSize(0.17);
+    h_axis_ratio->GetXaxis()->SetTitleOffset(1.0);
+    h_axis_ratio->GetXaxis()->SetTickLength(0.07);
+    h_axis_ratio->Draw("axis");
+    
+    TGraphErrors* g_ratio = new TGraphErrors(h_ratio);
+    g_ratio->SetName(Form("%s_graph",h_ratio->GetName()));
+    for (int ibin=0; ibin < h_ratio->GetNbinsX(); ++ibin) {
+      g_ratio->SetPointError(ibin, h_ratio->GetBinWidth(ibin+1)/2., h_ratio->GetBinError(ibin+1));
+    }
+    g_ratio->SetLineColor(kBlack);
+    g_ratio->SetMarkerColor(kBlack);
+    g_ratio->SetMarkerStyle(20);
+    g_ratio->Draw("p0same");
+    
+    //h_axis_ratio->Delete();
+    
+  } // if (doRatio)
+  
+  
+  gPad->Modified();
+  
+  can->Print(Form("plots/%s.pdf",canvas_name.Data()));
+  
+  return;
+}
+
+
 void compareMultiPlot()
 {
 
-  string dir = "~/UCSD/Upgrade/Hists/";
+  string dir0 = "~/UCSD/Upgrade/Hists/weights_2Jul17/";
+//  string dir = "~/UCSD/Upgrade/Hists/advanced3Jul17weights_2Sep17/";
+//  string dir = "~/UCSD/Upgrade/Hists/advanced8Aug17_2Sep17/";
+//  string dir = "~/UCSD/Upgrade/Hists/advanced8Aug17_17Sep17/";
+  string dir = "~/UCSD/Upgrade/Hists/advanced8Aug17_2Oct17/";
+  string dirSigScan = "~/UCSD/Upgrade/Hists/advancedSignal14Nov17/";
+  string dir2p4 = "~/UCSD/Upgrade/Hists/advanced8Aug17_2Oct17_eta2p4/";
+  string dir1p6 = "~/UCSD/Upgrade/Hists/advanced8Aug17_2Oct17_eta1p6/";
+  string dir2 = "~/UCSD/Upgrade/Hists/weights_8Aug17/";
   // Want to run Superimp with a vector of files, a vector of plots, a vector of labels.
   //void SuperimpVec(vector<TString> files, vector<TString> labels, vector<TString> nplots, TString xname, float maxY, TString saveas)
   vector<TString> files; std::vector<TString> labels; vector<TString> nplots; vector<TString> purpose;
 
   string plotName = "";
   string dataset = "";
+  string BJFile = "Bjall.root";
   string BBFile = "BBall.root";
+  string LLBFile = "LLBall.root";
   string BBBFile = "BBBall.root";
-  string sigFile = "rns_c2n4_decayedALL.root";
-  
-  
-  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
-  files.push_back(dir+BBFile);        labels.push_back("Diboson");                     nplots.push_back("Base/h_MET"); purpose.push_back("bkg");
-  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("Base/h_MET"); purpose.push_back("bkg");
-  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_MET"); purpose.push_back("sig");
-  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "METbeforeLepVeto", /*xT*/"MET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/1000 , /*rebin*/ 4 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
-  
+  string ttBFile = "ttBall.root";
+  string sigFile = "C2N4full.root";
   
   files.clear(); labels.clear(); nplots.clear(); purpose.clear();
-  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_MET"); purpose.push_back("bkg");
-//  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_MET"); purpose.push_back("sig"); --> Should try to understand OSWW
-  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_MET"); purpose.push_back("bkg");
-  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_MET"); purpose.push_back("bkg");
-  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_MET"); purpose.push_back("sig");
-  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MET", /*xT*/"MET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/1000 , /*rebin*/ 4 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
-    
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("Base/h_nlep"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("Base/h_nlep"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("Base/h_nlep"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("Base/h_nlep"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_nlep"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "Nlep_Base", /*xT*/"nlep" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
   
   files.clear(); labels.clear(); nplots.clear(); purpose.clear();
-  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_HTfull"); purpose.push_back("bkg");
-  //  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_MET"); purpose.push_back("sig"); --> Should try to understand OSWW
-  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_HTfull"); purpose.push_back("bkg");
-  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_HTfull"); purpose.push_back("bkg");
-  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_HTfull"); purpose.push_back("sig");
-  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "HT", /*xT*/"HT(jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/1000 , /*rebin*/ 4 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
-  
-  
-  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
-  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_njet30forward"); purpose.push_back("bkg");
-  //  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_MET"); purpose.push_back("sig"); --> Should try to understand OSWW
-  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_njet30forward"); purpose.push_back("bkg");
-  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_njet30forward"); purpose.push_back("bkg");
-  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_njet30forward"); purpose.push_back("sig");
-  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NJforward", /*xT*/"N(jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ -0.5, /*xM*/9.5 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
-  
-  
-  
-  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
-  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_njet30central"); purpose.push_back("bkg");
-  //  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_MET"); purpose.push_back("sig"); --> Should try to understand OSWW
-  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_njet30central"); purpose.push_back("bkg");
-  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_njet30central"); purpose.push_back("bkg");
-  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_njet30central"); purpose.push_back("sig");
-  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NJcentral", /*xT*/"N(jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ -0.5, /*xM*/9.5 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
-  
-
-  
-  
-  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
-  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_njet30"); purpose.push_back("bkg");
-  //  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_MET"); purpose.push_back("sig"); --> Should try to understand OSWW
-  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_njet30"); purpose.push_back("bkg");
-  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_njet30"); purpose.push_back("bkg");
-  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_njet30"); purpose.push_back("sig");
-  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NJ", /*xT*/"N(jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ -0.5, /*xM*/9.5 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
-  
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("Base/h_nlep_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("Base/h_nlep_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("Base/h_nlep_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("Base/h_nlep_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");                     nplots.push_back("Base/h_nlep_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("Base/h_nlep"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("Base/h_nlep_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("Base/h_nlep_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("Base/h_nlep_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("Base/h_nlep_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_nlep"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "Nlep_Base_cat", /*xT*/"nlep" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
 
   
   files.clear(); labels.clear(); nplots.clear(); purpose.clear();
-  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_mtmin"); purpose.push_back("bkg");
-  //  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_MET"); purpose.push_back("sig"); --> Should try to understand OSWW
-  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_mtmin"); purpose.push_back("bkg");
-  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("bVeto/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("bVeto/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("bVeto/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("bVeto/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_MET"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MET_bVeto", /*xT*/"MET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 4 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("bVeto/h_MET_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("bVeto/h_MET_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("bVeto/h_MET_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("bVeto/h_MET_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");                     nplots.push_back("bVeto/h_MET_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("bVeto/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("bVeto/h_MET_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("bVeto/h_MET_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("bVeto/h_MET_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("bVeto/h_MET_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_MET"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MET_bVeto_cat", /*xT*/"MET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 4 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("bVeto/h_HTfull"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("bVeto/h_HTfull"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("bVeto/h_HTfull"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("bVeto/h_HTfull"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_HTfull"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "HT_bVeto", /*xT*/"HT" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 4 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("bVeto/h_HTfull_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("bVeto/h_HTfull_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("bVeto/h_HTfull_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("bVeto/h_HTfull_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");                     nplots.push_back("bVeto/h_HTfull_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("bVeto/h_HTfull"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("bVeto/h_HTfull_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("bVeto/h_HTfull_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("bVeto/h_HTfull_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("bVeto/h_HTfull_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_HTfull"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "HT_bVeto_cat", /*xT*/"HT" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 4 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("bVeto/h_njet30"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("bVeto/h_njet30"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("bVeto/h_njet30"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("bVeto/h_njet30"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_njet30"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NJ_bVeto", /*xT*/"NJ" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("bVeto/h_njet30_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("bVeto/h_njet30_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("bVeto/h_njet30_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("bVeto/h_njet30_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");                     nplots.push_back("bVeto/h_njet30_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("bVeto/h_njet30"); purpose.push_back("bkg");
+ files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("bVeto/h_njet30_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("bVeto/h_njet30_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("bVeto/h_njet30_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("bVeto/h_njet30_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_njet30"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NJ_bVeto_cat", /*xT*/"NJ" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NB_lepVeto", /*xT*/"NB" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("lepVeto/h_nbjet30_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("lepVeto/h_nbjet30_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("lepVeto/h_nbjet30_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("lepVeto/h_nbjet30_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");                     nplots.push_back("lepVeto/h_nbjet30_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("lepVeto/h_nbjet30_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("lepVeto/h_nbjet30_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("lepVeto/h_nbjet30_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("lepVeto/h_nbjet30_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NB_lepVeto_cat", /*xT*/"NB" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("Base/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("Base/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("Base/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("Base/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_Base", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("Base/h_mtmin_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("Base/h_mtmin_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("Base/h_mtmin_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("Base/h_mtmin_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");                     nplots.push_back("Base/h_mtmin_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("Base/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("Base/h_mtmin_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("Base/h_mtmin_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("Base/h_mtmin_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("Base/h_mtmin_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_Base_cat", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("lepVeto/h_mtmin_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("lepVeto/h_mtmin_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("lepVeto/h_mtmin_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("lepVeto/h_mtmin_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");                     nplots.push_back("lepVeto/h_mtmin_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("lepVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("lepVeto/h_mtmin_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("lepVeto/h_mtmin_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("lepVeto/h_mtmin_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("lepVeto/h_mtmin_ttZ"); purpose.push_back("bkg");
   files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_mtmin"); purpose.push_back("sig");
-  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_lepVeto_cat", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("bVeto/h_mtmin_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("bVeto/h_mtmin_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("bVeto/h_mtmin_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("bVeto/h_mtmin_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");                     nplots.push_back("bVeto/h_mtmin_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("bVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("bVeto/h_mtmin_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("bVeto/h_mtmin_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("bVeto/h_mtmin_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("bVeto/h_mtmin_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_bVeto_cat", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("j2Veto/h_mtmin_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("j2Veto/h_mtmin_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("j2Veto/h_mtmin_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("j2Veto/h_mtmin_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");               nplots.push_back("j2Veto/h_mtmin_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("j2Veto/h_mtmin_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("j2Veto/h_mtmin_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("j2Veto/h_mtmin_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("j2Veto/h_mtmin_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_900_LSP_250_200PU.root");       labels.push_back("900/250");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_j2Veto_cat", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
   
   
   
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir2p4+BBFile);        labels.push_back("WZ");                     nplots.push_back("j2Veto/h_mtmin_WZ"); purpose.push_back("bkg");
+  files.push_back(dir2p4+BBFile);        labels.push_back("VG");                     nplots.push_back("j2Veto/h_mtmin_VG"); purpose.push_back("bkg");
+  files.push_back(dir2p4+BBFile);        labels.push_back("WW");                     nplots.push_back("j2Veto/h_mtmin_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir2p4+BBFile);        labels.push_back("ZZ");                     nplots.push_back("j2Veto/h_mtmin_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir2p4+BBFile);        labels.push_back("BB_other");               nplots.push_back("j2Veto/h_mtmin_other"); purpose.push_back("bkg");
+  files.push_back(dir2p4+LLBFile);        labels.push_back("LLB");                  nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir2p4+BBBFile);        labels.push_back("WWW");                     nplots.push_back("j2Veto/h_mtmin_WWW"); purpose.push_back("bkg");
+  files.push_back(dir2p4+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("j2Veto/h_mtmin_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir2p4+ttBFile);        labels.push_back("ttW");                     nplots.push_back("j2Veto/h_mtmin_ttW"); purpose.push_back("bkg");
+  files.push_back(dir2p4+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("j2Veto/h_mtmin_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir2p4+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_j2Veto_cat_eta2p4", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir1p6+BBFile);        labels.push_back("WZ");                     nplots.push_back("j2Veto/h_mtmin_WZ"); purpose.push_back("bkg");
+  files.push_back(dir1p6+BBFile);        labels.push_back("VG");                     nplots.push_back("j2Veto/h_mtmin_VG"); purpose.push_back("bkg");
+  files.push_back(dir1p6+BBFile);        labels.push_back("WW");                     nplots.push_back("j2Veto/h_mtmin_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir1p6+BBFile);        labels.push_back("ZZ");                     nplots.push_back("j2Veto/h_mtmin_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir1p6+BBFile);        labels.push_back("BB_other");               nplots.push_back("j2Veto/h_mtmin_other"); purpose.push_back("bkg");
+  files.push_back(dir1p6+LLBFile);        labels.push_back("LLB");                  nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir1p6+BBBFile);        labels.push_back("WWW");                     nplots.push_back("j2Veto/h_mtmin_WWW"); purpose.push_back("bkg");
+  files.push_back(dir1p6+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("j2Veto/h_mtmin_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir1p6+ttBFile);        labels.push_back("ttW");                     nplots.push_back("j2Veto/h_mtmin_ttW"); purpose.push_back("bkg");
+  files.push_back(dir1p6+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("j2Veto/h_mtmin_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir1p6+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_j2Veto_cat_eta1p6", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("mt120/h_MET_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("mt120/h_MET_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("mt120/h_MET_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("mt120/h_MET_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");               nplots.push_back("mt120/h_MET_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("mt120/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("mt120/h_MET_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("mt120/h_MET_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("mt120/h_MET_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("mt120/h_MET_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("mt120/h_MET"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MET_mt120_cat", /*xT*/"MET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("j2Veto/h_MT2_WZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("VG");                     nplots.push_back("j2Veto/h_MT2_VG"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("j2Veto/h_MT2_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("j2Veto/h_MT2_ZZ"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB_other");               nplots.push_back("j2Veto/h_MT2_other"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("j2Veto/h_MT2"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("WWW");                     nplots.push_back("j2Veto/h_MT2_WWW"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("j2Veto/h_MT2_VVZ"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("j2Veto/h_MT2_ttW"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("j2Veto/h_MT2_ttZ"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j2Veto/h_MT2"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MT2_j2Veto_cat", /*xT*/"MT2" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/300 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("j2Veto/h_leppt0"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("j2Veto/h_leppt0"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("j2Veto/h_leppt0"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("j2Veto/h_leppt0"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j2Veto/h_leppt0"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "LepPt0_j2Veto", /*xT*/"pT (lep 1)" , /*yT*/ "Events" , /*xM*/ 20, /*xM*/100 , /*rebin*/ 5 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("j2Veto/h_leppt1"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("j2Veto/h_leppt1"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("j2Veto/h_leppt1"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("j2Veto/h_leppt1"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j2Veto/h_leppt1"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "LepPt1_j2Veto", /*xT*/"pT (lep 2)" , /*yT*/ "Events" , /*xM*/ 20, /*xM*/100 , /*rebin*/ 5 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("mt120/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("mt120/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("mt120/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("mt120/h_MET"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("mt120/h_MET"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_900_LSP_250_200PU.root");       labels.push_back("900/250");                   nplots.push_back("mt120/h_MET"); purpose.push_back("sig");
+
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MET_mt120", /*xT*/"MET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("mt120/h_leppt0"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("mt120/h_leppt0"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("mt120/h_leppt0"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("mt120/h_leppt0"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("mt120/h_leppt0"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "LepPt0_mt120", /*xT*/"pT (lep 1)" , /*yT*/ "Events" , /*xM*/ 20, /*xM*/100 , /*rebin*/ 5 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("mt120/h_leppt1"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("mt120/h_leppt1"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("mt120/h_leppt1"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("mt120/h_leppt1"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("mt120/h_leppt1"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "LepPt1_mt120", /*xT*/"pT (lep 2)" , /*yT*/ "Events" , /*xM*/ 20, /*xM*/100 , /*rebin*/ 5 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("mt120/h_lepeta0"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("mt120/h_lepeta0"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("mt120/h_lepeta0"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("mt120/h_lepeta0"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("mt120/h_lepeta0"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "LepEta0_mt120", /*xT*/"Eta(lep 1)" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 0 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("mt120/h_lepeta1"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("mt120/h_lepeta1"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("mt120/h_lepeta1"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("mt120/h_lepeta1"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("mt120/h_lepeta1"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "LepEta1_mt120", /*xT*/"Eta(lep 2)" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 0 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("bVeto/h_jet1pt"); purpose.push_back("bkg");
+  files.push_back(dir+LLBFile);        labels.push_back("LLB");                  nplots.push_back("bVeto/h_jet1pt"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("BBB");                     nplots.push_back("bVeto/h_jet1pt"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("bVeto/h_jet1pt"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_jet1pt"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "JetPt1_bVeto", /*xT*/"pT (jet 1)" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 5 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_400_LSP_150_200PU.root");       labels.push_back("400/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_450_LSP_150_200PU.root");       labels.push_back("450/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_450_LSP_250_200PU.root");       labels.push_back("450/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_500_LSP_150_200PU.root");       labels.push_back("500/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_500_LSP_250_200PU.root");       labels.push_back("500/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_550_LSP_150_200PU.root");       labels.push_back("550/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_550_LSP_250_200PU.root");       labels.push_back("550/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_150_200PU.root");       labels.push_back("600/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_250_200PU.root");       labels.push_back("600/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_650_LSP_150_200PU.root");       labels.push_back("650/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_650_LSP_250_200PU.root");       labels.push_back("650/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_700_LSP_150_200PU.root");       labels.push_back("700/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_700_LSP_250_200PU.root");       labels.push_back("700/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_750_LSP_150_200PU.root");       labels.push_back("750/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_750_LSP_250_200PU.root");       labels.push_back("750/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_800_LSP_150_200PU.root");       labels.push_back("800/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_800_LSP_250_200PU.root");       labels.push_back("800/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_850_LSP_150_200PU.root");       labels.push_back("850/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_850_LSP_250_200PU.root");       labels.push_back("850/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_900_LSP_150_200PU.root");       labels.push_back("900/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_900_LSP_250_200PU.root");       labels.push_back("900/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_150_200PU.root");       labels.push_back("950/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_250_200PU.root");       labels.push_back("950/250");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_bVeto_sigScan", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/0);
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dirSigScan+BBFile);        labels.push_back("WZ");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("VG");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("WW");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dirSigScan+BBFile);        labels.push_back("ZZ");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("BB_other");               nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+LLBFile);        labels.push_back("LLB");                  nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBBFile);        labels.push_back("WWW");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttW");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_400_LSP_150_200PU.root");       labels.push_back("400/150");                   nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_150_200PU.root");       labels.push_back("600/150");                   nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_250_200PU.root");       labels.push_back("600/250");                   nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_150_200PU.root");       labels.push_back("950/150");                   nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminBins_j2Veto", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 0 , /*log*/ 1, /*norm*/ 0, /*ratio*/1);
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dirSigScan+BBFile);        labels.push_back("WZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("VG");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("WW");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dirSigScan+BBFile);        labels.push_back("ZZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("BB_other");               nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+LLBFile);        labels.push_back("LLB");                  nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBBFile);        labels.push_back("WWW");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttW");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_400_LSP_150_200PU.root");       labels.push_back("400/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_150_200PU.root");       labels.push_back("600/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_250_200PU.root");       labels.push_back("600/250");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_150_200PU.root");       labels.push_back("950/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminBins_met250", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 0 , /*log*/ 1, /*norm*/ 0, /*ratio*/1);
+  
+
+  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_HTfull"); purpose.push_back("bkg");
+//  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_HTfull"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+//  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_HTfull"); purpose.push_back("bkg");
+//  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("ZZ/h_HTfull"); purpose.push_back("bkg");
+//  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("bVeto/h_HTfull"); purpose.push_back("bkg");
+//  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("bVeto/h_HTfull"); purpose.push_back("bkg");
+//  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_HTfull"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "HT", /*xT*/"HT(jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/1000 , /*rebin*/ 4 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+//  
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_njet30forward"); purpose.push_back("bkg");
+//  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_njet30forward"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+//  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_njet30forward"); purpose.push_back("bkg");
+//  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_njet30forward"); purpose.push_back("bkg");
+//  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_njet30forward"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NJforward", /*xT*/"N(jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ -0.5, /*xM*/9.5 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+//  
+//  
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_njet30central"); purpose.push_back("bkg");
+//  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_njet30central"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+//  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_njet30central"); purpose.push_back("bkg");
+//  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_njet30central"); purpose.push_back("bkg");
+//  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_njet30central"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NJcentral", /*xT*/"N(jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ -0.5, /*xM*/9.5 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+//  
+
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("bVeto/h_njet30"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("bVeto/h_njet30"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("bVeto/h_njet30"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_njet30"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NJ", /*xT*/"N(jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ -0.5, /*xM*/9.5 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("bVeto/h_njet30"); purpose.push_back("sig");
+  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("bVeto/h_njet30"); purpose.push_back("sig");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("bVeto/h_njet30"); purpose.push_back("sig");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_njet30"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NJshape", /*xT*/"N(jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ -0.5, /*xM*/9.5 , /*rebin*/ 1 , /*log*/ 0, /*norm*/ 1, /*ratio*/ 0 );
+  
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("lepVeto/h_nbjet30"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_nbjet30"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "NB", /*xT*/"N(b-jet 30 GeV)" , /*yT*/ "Events" , /*xM*/ -0.5, /*xM*/9.5 , /*rebin*/ 1 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+  
+  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();  
+////  files.push_back(dir+BJFile);        labels.push_back("BJ (Fakes)");                     nplots.push_back("j4Veto/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_mtmin"); purpose.push_back("bkg");
+////  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_mtmin"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+////  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+BBFile);        labels.push_back("VV(*)");                     nplots.push_back("other/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+BBFile);        labels.push_back("WW");                     nplots.push_back("WW/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+BBFile);        labels.push_back("ZZ");                     nplots.push_back("ZZ/h_mtmin"); purpose.push_back("bkg");
+////  files.push_back(dir+BBBFile);        labels.push_back("Triboson");               nplots.push_back("j4Veto/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+BBBFile);        labels.push_back("WWW");               nplots.push_back("WWW/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+BBBFile);        labels.push_back("VVZ");               nplots.push_back("VVZ/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+BBBFile);        labels.push_back("VH");               nplots.push_back("VH/h_mtmin"); purpose.push_back("bkg");
+////  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("j4Veto/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("ttW/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("ttZ/h_mtmin"); purpose.push_back("bkg");
+//  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j4Veto/h_mtmin"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+//  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_SB", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+//  
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BJFile);        labels.push_back("BJ (Fakes)");                     nplots.push_back("Base/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("Base/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("Base/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("Base/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("Base/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminBase", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BJFile);        labels.push_back("BJ (Fakes)");                     nplots.push_back("lepVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("lepVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("lepVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminLepVeto", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+  
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BJFile);        labels.push_back("BJ (Fakes)");                     nplots.push_back("bVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("bVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("bVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("bVeto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminLepBVeto", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+  
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BJFile);        labels.push_back("BJ (Fakes)");                     nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("BB");                     nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+ttBFile);        labels.push_back("ttB");                     nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("bkg");
+  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminLepBJVeto", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminLepBJVeto_SB", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_mtminmm"); purpose.push_back("bkg");
+//  //  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_MET"); purpose.push_back("sig"); --> Should try to understand OSWW
+//  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_mtminmm"); purpose.push_back("bkg");
+//  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_mtminmm"); purpose.push_back("bkg");
+//  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_mtminmm"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_mm", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 5 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_mtminem"); purpose.push_back("bkg");
+//  //  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_MET"); purpose.push_back("sig"); --> Should try to understand OSWW
+//  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_mtminem"); purpose.push_back("bkg");
+//  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_mtminem"); purpose.push_back("bkg");
+//  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_mtminem"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_em", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 5 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir+BBFile);        labels.push_back("WZ");                     nplots.push_back("WZ/h_mtminee"); purpose.push_back("bkg");
+//  //  files.push_back(dir+BBFile);        labels.push_back("OSWW");                     nplots.push_back("OSWW/h_MET"); purpose.push_back("sig"); --> Should try to understand OSWW
+//  files.push_back(dir+BBFile);        labels.push_back("SSWW");                     nplots.push_back("SSWW/h_mtminee"); purpose.push_back("bkg");
+//  files.push_back(dir+BBBFile);        labels.push_back("Triboson");                     nplots.push_back("lepVeto/h_mtminee"); purpose.push_back("bkg");
+//  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("lepVeto/h_mtminee"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_ee", /*xT*/"MTmin [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 5 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
+//  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir+BBFile);        labels.push_back("Gen Muons");                     nplots.push_back("h_genLepEtaMuPt5_mmm"); purpose.push_back("bkg");
+  files.push_back(dir+BBFile);        labels.push_back("Reco Muons");                     nplots.push_back("h_foundLepEtaMuPt5_mmm"); purpose.push_back("sig");
+  files.push_back(dir+BBFile);        labels.push_back("Lost Muons");                     nplots.push_back("h_lostLepEtaMuPt5_mmm"); purpose.push_back("sig");
+  files.push_back(dir+sigFile);       labels.push_back("Signal Gen Muons");                   nplots.push_back("h_genLepEtaMuPt5"); purpose.push_back("sig");
+
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  //  files.push_back(dir+BBFile);        labels.push_back("Gen Muons");                     nplots.push_bacSupplek("h_genLepEtaMuPt5_mmm"); purpose.push_back("bkg");
+  files.push_back(dir0+"/eta1p6/"+BBFile);        labels.push_back("Lost #mu (|#eta|<1.6)");                     nplots.push_back("h_lostLepEtaMuPt5_mmm"); purpose.push_back("sig");
+  files.push_back(dir0+"/eta2p4/"+BBFile);        labels.push_back("Lost #mu (|#eta|<2.4)");                     nplots.push_back("h_lostLepEtaMuPt5_mmm"); purpose.push_back("sig");
+  files.push_back(dir0+"/eta2p8/"+BBFile);        labels.push_back("Lost #mu (|#eta|<2.8)");                     nplots.push_back("h_lostLepEtaMuPt5_mmm"); purpose.push_back("sig");
+  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "GenMuonEtaMMM", /*xT*/"Generated muon |#eta|" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0 );
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  //  files.push_back(dir+BBFile);        labels.push_back("Gen Muons");                     nplots.push_back("h_genLepEtaMuPt5_mmm"); purpose.push_back("bkg");
+  files.push_back(dir0+"/eta1p6/"+BBFile);        labels.push_back("Lost #mu (|#eta|<1.6)");                     nplots.push_back("h_lostLepEtaMuPt5"); purpose.push_back("sig");
+  files.push_back(dir0+"/eta2p4/"+BBFile);        labels.push_back("Lost #mu (|#eta|<2.4)");                     nplots.push_back("h_lostLepEtaMuPt5"); purpose.push_back("sig");
+  files.push_back(dir0+"/eta2p8/"+BBFile);        labels.push_back("Lost #mu (|#eta|<2.8)");                     nplots.push_back("h_lostLepEtaMuPt5"); purpose.push_back("sig");
+  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "GenMuonEtaAll", /*xT*/"Generated muon #eta" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0 );
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  //  files.push_back(dir+BBFile);        labels.push_back("Gen Muons");                     nplots.push_back("h_genLepEtaMuPt5_mmm"); purpose.push_back("bkg");
+  files.push_back(dir0+"/CMS4looper/WZ.root");        labels.push_back("Lost #mu (|#eta|<1.6)");                     nplots.push_back("h_lostLepAbsEtaMuPt5_mmm"); purpose.push_back("sig");
+  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "GenMuonEtaMMM_FullSim", /*xT*/"Gen Muon #eta" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0);
+//  
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir+ttBFile);        labels.push_back("Gen b-quarks");                     nplots.push_back("hBeforeBVeto_genBEta"); purpose.push_back("sig");
+//  files.push_back(dir+ttBFile);        labels.push_back("Matched to b-jet");                     nplots.push_back("hBeforeBVeto_foundBEta"); purpose.push_back("sig");
+//  files.push_back(dir+ttBFile);        labels.push_back("Lost");                     nplots.push_back("hBeforeBVeto_lostBEta"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "GenBeta", /*xT*/"Generated b quark #eta" , /*yT*/ "Events" , /*xM*/ -4.0, /*xM*/4.0 , /*rebin*/ 1 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0 );
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir2+BBFile);        labels.push_back("#eta(#mu) < 1.6");                     nplots.push_back("WZ/h_LostMuon1p6METres"); purpose.push_back("sig");
+//  files.push_back(dir2+BBFile);        labels.push_back("All #mu in MET");                     nplots.push_back("WZ/h_LostMuon1p6OrigMETres"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "MetRes1p6", /*xT*/"(RecoMET - GenMET)/GenMET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 8 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0 );
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir2+BBFile);        labels.push_back("#eta(#mu) < 2.4");                     nplots.push_back("WZ/h_LostMuon2p4METres"); purpose.push_back("sig");
+//  files.push_back(dir2+BBFile);        labels.push_back("All #mu in MET");                     nplots.push_back("WZ/h_LostMuon2p4OrigMETres"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "MetRes2p4", /*xT*/"(RecoMET - GenMET)/GenMET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 8 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0 );
+//  
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir2+BBFile);        labels.push_back("#eta(#mu) < 1.6");                     nplots.push_back("WZ/h_LostMuon1p6MET"); purpose.push_back("sig");
+//  files.push_back(dir2+BBFile);        labels.push_back("All #mu in MET");                     nplots.push_back("WZ/h_LostMuon1p6OrigMET"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "Met1p6", /*xT*/"RecoMET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 8 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0 );
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dir2+BBFile);        labels.push_back("#eta(#mu) < 2.4");                     nplots.push_back("WZ/h_LostMuon2p4MET"); purpose.push_back("sig");
+//  files.push_back(dir2+BBFile);        labels.push_back("All #mu in MET");                     nplots.push_back("WZ/h_LostMuon2p4OrigMET"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "Met2p4", /*xT*/"RecoMET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 8 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0 );
+  
+
   
   return;
 }
