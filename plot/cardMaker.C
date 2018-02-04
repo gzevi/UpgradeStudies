@@ -23,6 +23,7 @@
 using namespace std;
 
 TFile* f_BJ = 0;
+TFile* f_TT = 0;
 TFile* f_BB = 0;
 TFile* f_LLB = 0;
 TFile* f_BBB = 0;
@@ -77,6 +78,7 @@ int printCard( string dir_str , int mtbin , string signal, string output_dir, in
   TString dir = TString(dir_str);
   TString fullhistname = dir + "/h_mtminbins";
   TString fullhistnameScan = dir + "/h_mtminbins";
+  TString fullhistnameFakes = "Base/h_mtminbins";
   
   TString signame(signal);
   if (scanM1 >= 0 && scanM2 >= 0) {
@@ -181,14 +183,23 @@ int printCard( string dir_str , int mtbin , string signal, string output_dir, in
     totalPrompts += h_ttB->Integral();
   } 
   
-  TH1D* h_BJ = (TH1D*) f_BJ->Get(fullhistname);
+  TH1D* h_BJ = (TH1D*) f_BJ->Get(fullhistnameFakes);
+  TH1D* h_TT = (TH1D*) f_TT->Get(fullhistnameFakes);
   IncludeOverflow(h_BJ);
+  IncludeOverflow(h_TT);
+  if (h_TT != 0) {
+    // Rescale the fakes to the ratio of j2Veto / Base
+    h_TT->Scale( 0.00529037*1.25);
+  }
   if (h_BJ != 0) {
-    // Rescale the fakes to a percentage of the prompts
-    h_BJ->Scale( 1.0 * totalPrompts / h_BJ->Integral());
+    // Rescale the fakes to the ratio of j2Veto / Base
+    h_BJ->Scale( 0.07*1.25);
+    if (h_TT) h_BJ->Add(h_TT);
     n_BJ = h_BJ->GetBinContent(mtbin);
     err_BJ_mcstat = h_BJ->GetBinError(mtbin) > 0 ? h_BJ->GetBinError(mtbin)/h_BJ->GetBinContent(mtbin) : 0;
   } 
+  n_BJ = 0;
+  err_BJ_mcstat = 0;
   
   int n_syst = 0;
   double BB_mcstat = 1. + err_BB_mcstat;
@@ -239,13 +250,13 @@ int printCard( string dir_str , int mtbin , string signal, string output_dir, in
   ofile.open(cardname);
 
   ofile <<  "imax 1  number of channels"                                                    << endl;
-  ofile <<  "jmax 3  number of backgrounds"                                                 << endl;
+  ofile <<  "jmax 5  number of backgrounds"                                                 << endl;
   ofile <<  "kmax *"                                                                        << endl;
   ofile <<  "------------"                                                                  << endl;
   ofile <<  Form("bin         %s",channel.c_str())                                          << endl;
   ofile <<  Form("observation %.3f",n_data)                                                 << endl;
   ofile <<  "------------"                                                                  << endl;
-  ofile <<  Form("bin             %s   %s   %s   %s",channel.c_str(),channel.c_str(),channel.c_str(),channel.c_str()) << endl;
+  ofile <<  Form("bin             %s   %s   %s   %s   %s   %s",channel.c_str(),channel.c_str(),channel.c_str(),channel.c_str(),channel.c_str(),channel.c_str()) << endl;
   ofile <<  "process          sig       BB        LLB       BBB       ttB       Fakes "                                      << endl; 
   ofile <<  "process           0         1           2         3         4         5"                                      << endl;
   ofile <<  Form("rate            %.3f    %.3f      %.3f      %.3f      %.3f      %.3f",n_sig,n_BB,n_LLB,n_BBB, n_ttB, n_BJ) << endl;
@@ -328,6 +339,7 @@ void cardMaker(string signal = "Decayed_C2N4_Baer_450_LSP_150_200PU",
   // set input files
   
   f_BJ = new TFile(Form("%s/Bjall.root",input_dir.c_str()));
+  f_TT = new TFile(Form("%s/ttall.root",input_dir.c_str()));
   f_BB = new TFile(Form("%s/BBall.root",input_dir.c_str()));
   f_LLB = new TFile(Form("%s/LLBall.root",input_dir.c_str()));
   f_BBB = new TFile(Form("%s/BBBall.root",input_dir.c_str()));

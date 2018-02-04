@@ -29,7 +29,7 @@ TCanvas *canv;
 TString outname = "prova.root";
 
 //int favColors[5] = { kBlack, kOrange-2, kAzure-2, kViolet-2, kSpring-2};
-int favColors[10] = { kOrange-2, kBlue+2, kViolet-2, kAzure-2, kRed-7, kSpring-1, kMagenta-9, kCyan+2, kOrange+1, kGreen+2 };
+int favColors[11] = {  kGreen+2, kOrange-2, kBlue+2, kViolet-2, kAzure-2, kRed-7, kSpring-1, kMagenta-9, kCyan+2, kOrange+1, kGreen+2  };
 
 //int favColors[10] = { kSpring-5, kAzure+7, kCyan-7, kRed-7, kOrange-4, kMagenta-7, kTeal-5, kGray, kGray, kGray };
 //int favColors[10] = { kAzure+8, kAzure-2, kSpring-5, kSpring-6, kRed-7, kRed, kMagenta, kViolet+3, kOrange-3, kOrange+7};
@@ -404,7 +404,7 @@ void SuperimpVecRatio(vector<TString> files, vector<TString> labels, vector<TStr
     if (autoMaxY < h1->GetMaximum()*1.3 ) autoMaxY = h1->GetMaximum()*1.3;
     if (doLog) {  
       p01->SetLogy(1);   
-      h1->GetYaxis()->SetRangeUser(1, maxY==0 ? autoMaxY*2 : maxY*2);
+      h1->GetYaxis()->SetRangeUser(0.1, maxY==0 ? autoMaxY*2 : maxY*2);
     }
     else h1->GetYaxis()->SetRangeUser(0, maxY==0 ? autoMaxY : maxY); // this doesn't quite work. Only first histogram is taken into account
     if ( saveas.Contains("Purity") )
@@ -985,7 +985,7 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
   leg->SetFillColor(0);
   leg->SetBorderSize(0);
   leg->SetTextSize(0.032);
-  if (doRatio) leg->SetTextSize(0.05);
+  if (doRatio) leg->SetTextSize(0.045);
   
   TH1D* data_hist(0);
   TString data_name;
@@ -1049,9 +1049,11 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
   vector<TString> sig_names;
   float bkgintegral = 0;
   // background hists
+  TH1D* h_tempFakes;
+  int colorIndex = 0;
   for( unsigned int i = 0 ; i < files.size() ; ++i ){
     if( !TString(purpose.at(i)).Contains("bkg")  ) continue;
-    
+
     TFile f1( files[i], "READ");
     if(!f1.IsOpen()){
       std::cout<<"File "<<files[i]<<" can't be found, will not be used for histogram "<<nplots[i]<<std::endl;
@@ -1061,14 +1063,14 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
       std::cout<<"Histogram "<<nplots[i]<<" not found in file "<<files[i]<<std::endl;
       continue;
     }
-    
+
     TH1D* h_temp = (TH1D*) f1.Get(nplots[i]);
     if (h_temp == 0) continue;
     // don't draw signal if the total yield in the plot is < 0.1 events
     //if (h_temp->Integral(0,-1) < 0.1) continue;
     TH1D* h = (TH1D*) h_temp->Clone("h1");
     h->SetDirectory(0);
-    
+
 //    h->SetFillColor(i+1);
 //    h->SetLineColor(i+1);
 //    if (i>=2) h->SetFillColor(2+i);
@@ -1076,14 +1078,35 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
 //    if (i>=2) h->SetLineColor(2+i);
 //    if (i>=3) h->SetLineColor(3+i);
     if (rebin > 1) h->Rebin(rebin);
+
+    // Special case: scale Fakes by 0.07 if they come from the Base directory
+    if ( labels[i] == "Fakes" && nplots[i].Contains("Base")) {
+      if ( files[i].Contains("Bjall") && files[i+1].Contains("ttall") ){
+        // Need to add keep BJ for later
+        h->Scale(0.07*1.25);
+        h_tempFakes = h;
+        h_tempFakes->SetDirectory(0);
+        continue;
+      }
+      else if ( i > 0 && files[i-1].Contains("Bjall") && files[i].Contains("ttall") ){
+        h->Scale(0.00529037*1.25);
+        h->Add(h_tempFakes);
+      }
+      else if ( files[i].Contains("Bjall") ) {
+        h->Scale(0.07*1.25);
+      }
+      else if ( i > 0 && files[i].Contains("ttall") ) {
+        h->Scale(0.00529037*1.25);
+      }
+    }
     
     
     //hack to fix colors for one bkg
     // h->SetFillColor(kOrange-2);
     // h->SetLineColor(kOrange-2);
 
-    h->SetFillColor(favColors[i]);
-    h->SetLineColor(favColors[i]);
+    h->SetFillColor(favColors[colorIndex]);
+    h->SetLineColor(favColors[colorIndex]);
     
     
     
@@ -1111,6 +1134,7 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
     bg_names.push_back(labels[i]);
 
     leg->AddEntry(h,labels[i],"f");
+    colorIndex++;
 
   }
   
@@ -1378,7 +1402,7 @@ void makeCMSPlotSignalBackground(  vector<TString> files,  vector<TString> label
 
 
 
-void makeCMSPlotSignalBackgroundPhase2TDR(  vector<TString> files,  vector<TString> labels, vector<TString> nplots , vector<TString> purpose , TString saveas, const string& xtitle , const string& ytitle , float xmin , float xmax , int rebin = 1 , bool logplot = false, bool norm = false, bool doRatio = false ) {
+void makeCMSPlotSignalBackgroundPhase2TDR(  vector<TString> files,  vector<TString> labels, vector<TString> nplots , vector<TString> purpose , TString saveas, const string& xtitle , const string& ytitle , float xmin , float xmax , int rebin = 1 , bool logplot = false, int norm = 0, bool doRatio = false ) {
   
   cout << "-- plotting hist: " << nplots[0] << " etc "<<endl;
   
@@ -1616,8 +1640,15 @@ void makeCMSPlotSignalBackgroundPhase2TDR(  vector<TString> files,  vector<TStri
     
     if (rebin > 1) h->Rebin(rebin);
     if (norm ) {
-      if (dataintegral != 0) h->Scale(  dataintegral / h->Integral()  );
-      else h->Scale(  1 / h->Integral()  );
+      if (norm == 2) { // Want the first bin to be scaled to 1
+        h->Scale(  1 / h->GetBinContent(1)  );
+        h->Print("all");
+        
+      }
+      else {
+        if (dataintegral != 0) h->Scale(  dataintegral / h->Integral()  );
+        else h->Scale(  1 / h->Integral()  );
+      }
     }
     sig_hists.push_back(h);
     sig_names.push_back(labels[i]);
@@ -1677,7 +1708,8 @@ void makeCMSPlotSignalBackgroundPhase2TDR(  vector<TString> files,  vector<TStri
   h_axes->GetYaxis()->SetLabelFont(42);
   h_axes->GetYaxis()->SetLabelSize(0.05915);
   h_axes->GetYaxis()->SetTitleSize(0.05915);
-  h_axes->GetYaxis()->SetTitleOffset(1.4);
+//  h_axes->GetYaxis()->SetTitleOffset(1.4);
+  h_axes->GetYaxis()->SetTitleOffset(1.0);
   h_axes->GetYaxis()->SetTitleFont(42);
   
   
@@ -1890,6 +1922,7 @@ void compareMultiPlot()
   string plotName = "";
   string dataset = "";
   string BJFile = "Bjall.root";
+  string TTFile = "ttall.root";
   string BBFile = "BBall.root";
   string LLBFile = "LLBall.root";
   string BBBFile = "BBBall.root";
@@ -2078,9 +2111,18 @@ void compareMultiPlot()
   files.push_back(dir+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("j2Veto/h_mtmin_VVZ"); purpose.push_back("bkg");
   files.push_back(dir+ttBFile);        labels.push_back("ttW");                     nplots.push_back("j2Veto/h_mtmin_ttW"); purpose.push_back("bkg");
   files.push_back(dir+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("j2Veto/h_mtmin_ttZ"); purpose.push_back("bkg");
-  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
-  files.push_back(dirSigScan+"Decayed_C2N4_Baer_900_LSP_250_200PU.root");       labels.push_back("900/250");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+//  files.push_back(dir+sigFile);       labels.push_back("C2N4");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_400_LSP_150_200PU.root");       labels.push_back("400/150");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_150_200PU.root");       labels.push_back("600/150");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_250_200PU.root");       labels.push_back("600/250");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_150_200PU.root");       labels.push_back("950/150");                   nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dir+BJFile);        labels.push_back("Fakes");                     nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
   makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_j2Veto_cat", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 1 );
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dir+BJFile);        labels.push_back("Fakes, all N(jets)");                     nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
+  files.push_back(dir+BJFile);        labels.push_back("Fakes, N(jets)=0");                     nplots.push_back("j2Veto/h_mtmin"); purpose.push_back("sig");
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTmin_Fakes_jetVeto", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 10 , /*log*/ 1, /*norm*/ 0, /*ratio*/ 0 );
   
   
   
@@ -2249,39 +2291,42 @@ void compareMultiPlot()
   
   
   files.clear(); labels.clear(); nplots.clear(); purpose.clear();
-  files.push_back(dirSigScan+BBFile);        labels.push_back("WZ");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBFile);        labels.push_back("VG");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBFile);        labels.push_back("WW");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg"); //--> Should try to understand OSWW
-  files.push_back(dirSigScan+BBFile);        labels.push_back("ZZ");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBFile);        labels.push_back("BB_other");               nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BJFile);        labels.push_back("Fakes");                     nplots.push_back("Base/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+TTFile);        labels.push_back("Fakes");                     nplots.push_back("Base/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("WZ");                     nplots.push_back("j2Veto/h_mtminbins_WZ"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("VG");                     nplots.push_back("j2Veto/h_mtminbins_VG"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("WW");                     nplots.push_back("j2Veto/h_mtminbins_WW"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+  files.push_back(dirSigScan+BBFile);        labels.push_back("ZZ");                     nplots.push_back("j2Veto/h_mtminbins_ZZ"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBFile);        labels.push_back("BB_other");               nplots.push_back("j2Veto/h_mtminbins_other"); purpose.push_back("bkg");
   files.push_back(dirSigScan+LLBFile);        labels.push_back("LLB");                  nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBBFile);        labels.push_back("WWW");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttW");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBBFile);        labels.push_back("WWW");                     nplots.push_back("j2Veto/h_mtminbins_WWW"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("j2Veto/h_mtminbins_VVZ"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttW");                     nplots.push_back("j2Veto/h_mtminbins_ttW"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("j2Veto/h_mtminbins_ttZ"); purpose.push_back("bkg");
   files.push_back(dirSigScan+"Decayed_C2N4_Baer_400_LSP_150_200PU.root");       labels.push_back("400/150");                   nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("sig");
   files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_150_200PU.root");       labels.push_back("600/150");                   nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("sig");
   files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_250_200PU.root");       labels.push_back("600/250");                   nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("sig");
   files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_150_200PU.root");       labels.push_back("950/150");                   nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("sig");
-  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminBins_j2Veto", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 0 , /*log*/ 1, /*norm*/ 0, /*ratio*/1);
-  
-  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
-  files.push_back(dirSigScan+BBFile);        labels.push_back("WZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBFile);        labels.push_back("VG");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBFile);        labels.push_back("WW");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg"); //--> Should try to understand OSWW
-  files.push_back(dirSigScan+BBFile);        labels.push_back("ZZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBFile);        labels.push_back("BB_other");               nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+LLBFile);        labels.push_back("LLB");                  nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBBFile);        labels.push_back("WWW");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttW");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+"Decayed_C2N4_Baer_400_LSP_150_200PU.root");       labels.push_back("400/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
-  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_150_200PU.root");       labels.push_back("600/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
-  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_250_200PU.root");       labels.push_back("600/250");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
-  files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_150_200PU.root");       labels.push_back("950/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
-  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminBins_met250", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 0 , /*log*/ 1, /*norm*/ 0, /*ratio*/1);
-  
+  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminBins_j2Veto", /*xT*/"m_{T, min} [GeV]" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 0 , /*log*/ 1, /*norm*/ 0, /*ratio*/1);
+
+
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("WZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("VG");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("WW");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg"); //--> Should try to understand OSWW
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("ZZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("BB_other");               nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+LLBFile);        labels.push_back("LLB");                  nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBBFile);        labels.push_back("WWW");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttW");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+"Decayed_C2N4_Baer_400_LSP_150_200PU.root");       labels.push_back("400/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+//  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_150_200PU.root");       labels.push_back("600/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+//  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_250_200PU.root");       labels.push_back("600/250");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+//  files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_150_200PU.root");       labels.push_back("950/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+//  makeCMSPlotSignalBackground(files, labels, nplots, purpose, "MTminBins_met250", /*xT*/"MTmin" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 0 , /*log*/ 1, /*norm*/ 0, /*ratio*/1);
+//  
 
   
 //  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
@@ -2452,6 +2497,16 @@ void compareMultiPlot()
   //  files.push_back(dir+BBFile);        labels.push_back("Gen Muons");                     nplots.push_back("h_genLepEtaMuPt5_mmm"); purpose.push_back("bkg");
   files.push_back(dir0+"/CMS4looper/WZ.root");        labels.push_back("Lost #mu (|#eta|<1.6)");                     nplots.push_back("h_lostLepAbsEtaMuPt5_mmm"); purpose.push_back("sig");
   makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "GenMuonEtaMMM_FullSim", /*xT*/"Gen Muon #eta" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0);
+  
+  
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  // number of events for which the eta of the lost lepton is greater then ieta
+  files.push_back("~/UCSD/Upgrade/Hists/advancedSignal14Nov17_eta1p6/"+BBFile);        labels.push_back("WZ(#mu#mu#mu#nu)");                     nplots.push_back("h_lostLepIntegratedEtaMuPt5_mmm"); purpose.push_back("sig");
+  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "GenMuonEtaIntegratedMMM", /*xT*/"muon veto |#eta| cut" , /*yT*/ "Background reduction" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 1 , /*log*/ 0, /*norm*/ 2, /*ratio*/ 0 );
+   makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "GenMuonEtaIntegratedMMMRestricted", /*xT*/"muon veto |#eta| cut" , /*yT*/ "Background reduction" , /*xM*/ 0, /*xM*/2.9 , /*rebin*/ 1 , /*log*/ 0, /*norm*/ 2, /*ratio*/ 0 );
+  
+  
 //  
 //  
 //  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
@@ -2480,6 +2535,18 @@ void compareMultiPlot()
 //  files.push_back(dir2+BBFile);        labels.push_back("#eta(#mu) < 2.4");                     nplots.push_back("WZ/h_LostMuon2p4MET"); purpose.push_back("sig");
 //  files.push_back(dir2+BBFile);        labels.push_back("All #mu in MET");                     nplots.push_back("WZ/h_LostMuon2p4OrigMET"); purpose.push_back("sig");
 //  makeCMSPlotSignalBackgroundPhase2TDR(files, labels, nplots, purpose, "Met2p4", /*xT*/"RecoMET" , /*yT*/ "Events" , /*xM*/ 0, /*xM*/0 , /*rebin*/ 8 , /*log*/ 0, /*norm*/ 0, /*ratio*/ 0 );
+  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dirSigScan+BJFile);        labels.push_back("Baseline");                     nplots.push_back("Base/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BJFile);        labels.push_back("Z veto");                     nplots.push_back("Zveto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BJFile);        labels.push_back("3rd lep veto");                     nplots.push_back("lepVeto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BJFile);        labels.push_back("b-jet veto");                     nplots.push_back("bVeto/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+BJFile);        labels.push_back("jet veto");                     nplots.push_back("j2Veto/h_mtminbins"); purpose.push_back("bkg");
+  SuperimpVecRatio(files, labels, nplots, "min( m_{T} ) [GeV]", /*yname*/ "", /*maxY*/0, "BjFakes",  /*norm*/ 0,  /*X1*/  0,  /*X2*/  0,  /*doLog*/  true); //,  /*rebin*/ 1);
+  SuperimpVecRatio(files, labels, nplots, "min( m_{T} ) [GeV]", /*yname*/ "", /*maxY*/0, "BjFakesNorm",  /*norm*/ 1,  /*X1*/  0,  /*X2*/  0,  /*doLog*/  false); //,  /*rebin*/ 1);
+  //void SuperimpVec(vector<TString> files, vector<TString> labels, vector<TString> nplots, TString xname, float maxY, TString saveas, bool norm=0, int X1 = 30, int X2 = 150, bool doLog = false, int reb=1 )
+//  void SuperimpVecRatio(vector<TString> files, vector<TString> labels, vector<TString> nplots, TString xname, TString yname = "", float maxY=0, TString saveas="", bool norm=0, int X1 = 30, int X2 = 150, bool doLog = false)
+
   
 
   

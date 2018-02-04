@@ -225,6 +225,7 @@ void printDetailedTable( vector<TString> files , vector<TString> labels ,  vecto
   << "\\hline\\hline" << endl;
   
   // backgrounds first -- loop backwards
+  TH1D* h_tempFakes;
   for( int isamp = n-1 ; isamp >= 0 ; --isamp ){
     if( TString(purpose.at(isamp)).Contains("data")  ) continue;
     if( TString(purpose.at(isamp)).Contains("sig")  ) continue;
@@ -245,6 +246,31 @@ void printDetailedTable( vector<TString> files , vector<TString> labels ,  vecto
       double yield = 0.;
       double err = 0.;
       if (h) {
+        
+
+        // Special case: scale Fakes by 0.07 if they come from the Base directory
+        if ( labels[isamp] == "Fakes" && nplots[isamp].Contains("Base")) {
+          if ( isamp > 0 && files[isamp-1].Contains("Bjall") && files[isamp].Contains("ttall") ){
+            // Need to add keep BJ for later
+            h->Scale(0.00529037*1.25); // Add 25% to account for light flavor. 
+            h_tempFakes = h;
+            h_tempFakes->SetDirectory(0);
+            continue;
+          }
+          else if ( isamp<=n && files[isamp].Contains("Bjall") && files[isamp+1].Contains("ttall") ){
+            h->Scale(0.07*1.25);
+            h->Add(h_tempFakes);
+          }
+          else if ( isamp<=n && files[isamp].Contains("Bjall") ) {
+            h->Scale(0.07*1.25);
+          }
+          else if ( isamp > 0 && files[isamp].Contains("ttall") ) {
+            h->Scale(0.00529037*1.25);
+          }
+        }
+        
+        
+        
         // not last bin
         if(ibin != n_mt2bins) {
           yield = h->GetBinContent(ibin);
@@ -363,6 +389,7 @@ void makeTable() {
 
   
   string BJFile = "Bjall.root"; 
+  string TTFile = "ttall.root"; 
   string BBFile = "BBall.root"; 
   string LLBFile = "LLBall.root";
   string BBFile700 = "BB0to700.root"; 
@@ -518,7 +545,9 @@ void makeTable() {
   printTable(files, labels, nplots, SRdirs, 120, "Muon veto out to eta $<$ 1.6");
   
   
-  files.clear(); labels.clear(); nplots.clear(); purpose.clear();  
+  files.clear(); labels.clear(); nplots.clear(); purpose.clear();
+  files.push_back(dirSigScan+BJFile);        labels.push_back("Fakes");                    nplots.push_back("Base/h_mtminbins"); purpose.push_back("bkg");
+  files.push_back(dirSigScan+TTFile);        labels.push_back("Fakes");                    nplots.push_back("Base/h_mtminbins"); purpose.push_back("bkg");
   files.push_back(dirSigScan+BBFile);        labels.push_back("WZ");                     nplots.push_back("j2Veto/h_mtminbins_WZ"); purpose.push_back("bkg");
   files.push_back(dirSigScan+BBFile);        labels.push_back("VG");                     nplots.push_back("j2Veto/h_mtminbins_VG"); purpose.push_back("bkg");
   files.push_back(dirSigScan+BBFile);        labels.push_back("WW");                     nplots.push_back("j2Veto/h_mtminbins_WW"); purpose.push_back("bkg"); 
@@ -538,24 +567,24 @@ void makeTable() {
   printDetailedTable(files, labels, nplots, purpose);
   //  void printDetailedTable( vector<TFile*> samples , vector<string> names , string dir) {
 
-  
-  files.clear(); labels.clear(); nplots.clear(); purpose.clear();  
-  files.push_back(dirSigScan+BBFile);        labels.push_back("WZ");                     nplots.push_back("met250/h_mtminbins_WZ"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBFile);        labels.push_back("VG");                     nplots.push_back("met250/h_mtminbins_VG"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBFile);        labels.push_back("WW");                     nplots.push_back("met250/h_mtminbins_WW"); purpose.push_back("bkg"); 
-  files.push_back(dirSigScan+BBFile);        labels.push_back("ZZ");                     nplots.push_back("met250/h_mtminbins_ZZ"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBFile);        labels.push_back("BBother");               nplots.push_back("met250/h_mtminbins_other"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+LLBFile);        labels.push_back("LLB");                  nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBBFile);        labels.push_back("WWW");                     nplots.push_back("met250/h_mtminbins_WWW"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("met250/h_mtminbins_VVZ"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttW");                     nplots.push_back("met250/h_mtminbins_ttW"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("met250/h_mtminbins_ttZ"); purpose.push_back("bkg");
-  files.push_back(dirSigScan+"Decayed_C2N4_Baer_450_LSP_150_200PU.root");       labels.push_back("450/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
-  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_150_200PU.root");       labels.push_back("600/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
-  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_250_200PU.root");       labels.push_back("600/250");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
-  files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_150_200PU.root");       labels.push_back("950/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
-  //  SRdirs.push_back("Yield");
-  printDetailedTable(files, labels, nplots, purpose);
+//  
+//  files.clear(); labels.clear(); nplots.clear(); purpose.clear();  
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("WZ");                     nplots.push_back("met250/h_mtminbins_WZ"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("VG");                     nplots.push_back("met250/h_mtminbins_VG"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("WW");                     nplots.push_back("met250/h_mtminbins_WW"); purpose.push_back("bkg"); 
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("ZZ");                     nplots.push_back("met250/h_mtminbins_ZZ"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBFile);        labels.push_back("BBother");               nplots.push_back("met250/h_mtminbins_other"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+LLBFile);        labels.push_back("LLB");                  nplots.push_back("met250/h_mtminbins"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBBFile);        labels.push_back("WWW");                     nplots.push_back("met250/h_mtminbins_WWW"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+BBBFile);        labels.push_back("VVZ");                     nplots.push_back("met250/h_mtminbins_VVZ"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttW");                     nplots.push_back("met250/h_mtminbins_ttW"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+ttBFile);        labels.push_back("ttZ");                     nplots.push_back("met250/h_mtminbins_ttZ"); purpose.push_back("bkg");
+//  files.push_back(dirSigScan+"Decayed_C2N4_Baer_450_LSP_150_200PU.root");       labels.push_back("450/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+//  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_150_200PU.root");       labels.push_back("600/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+//  files.push_back(dirSigScan+"Decayed_C2N4_Baer_600_LSP_250_200PU.root");       labels.push_back("600/250");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+//  files.push_back(dirSigScan+"Decayed_C2N4_Baer_950_LSP_150_200PU.root");       labels.push_back("950/150");                   nplots.push_back("met250/h_mtminbins"); purpose.push_back("sig");
+//  //  SRdirs.push_back("Yield");
+//  printDetailedTable(files, labels, nplots, purpose);
   
   files.clear(); labels.clear(); nplots.clear(); purpose.clear();
   files.push_back(dirSigScan+"Decayed_C2N4_Baer_400_LSP_150_200PU.root");       labels.push_back("400/150");                   nplots.push_back("bVeto/h_mtmin"); purpose.push_back("sig");
